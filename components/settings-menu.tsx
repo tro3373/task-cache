@@ -246,6 +246,28 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
               {isLoading ? '接続テスト中...' : '接続テスト'}
             </Button>
           )}
+
+          {/* Clear Local Data */}
+          <Button
+            variant="destructive"
+            onClick={async () => {
+              try {
+                await dbManager.init();
+                const db = (dbManager as any).db;
+                const transaction = db.transaction(['tasks'], 'readwrite');
+                const store = transaction.objectStore('tasks');
+                await store.clear();
+                toast.success('ローカルデータをクリアしました');
+                window.location.reload(); // Reload to reflect changes
+              } catch (error) {
+                toast.error('データクリアに失敗しました');
+              }
+            }}
+            className="w-full"
+          >
+            <Database className="h-4 w-4 mr-2" />
+            ローカルデータをクリア
+          </Button>
         </div>
 
         <DialogFooter>
