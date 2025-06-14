@@ -19,7 +19,7 @@ export default function Home() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMoreTasks, setHasMoreTasks] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | 'read' | 'stocked' | 'unread'>('all');
+  const [filter, setFilter] = useState<'all' | 'read' | 'stocked' | 'unread'>('unread');
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Helper function to remove duplicate tasks by ID
