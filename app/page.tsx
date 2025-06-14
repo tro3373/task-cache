@@ -211,13 +211,14 @@ export default function Home() {
         await navigator.share({
           title: task.title,
           text: task.description,
-          url: window.location.href,
+          url: task.url || task.notionPageUrl || window.location.href,
         });
       } catch (error) {
         console.log('Share cancelled');
       }
     } else {
-      await navigator.clipboard.writeText(`${task.title}\n${task.description || ''}`);
+      const shareText = `${task.title}\n${task.description || ''}\n${task.url || task.notionPageUrl || ''}`;
+      await navigator.clipboard.writeText(shareText);
       toast.success('クリップボードにコピーしました');
     }
   };
@@ -295,10 +296,26 @@ export default function Home() {
               }
             </p>
             {tasks.length === 0 && (
-              <Button onClick={syncData} disabled={isRefreshing}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                データを同期
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={syncData} disabled={isRefreshing}>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  データを同期
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={async () => {
+                    await dbManager.init();
+                    const db = (dbManager as any).db;
+                    const transaction = db.transaction(['tasks'], 'readwrite');
+                    const store = transaction.objectStore('tasks');
+                    await store.clear();
+                    setTasks([]);
+                    toast.success('ローカルデータをクリアしました');
+                  }}
+                >
+                  データクリア
+                </Button>
+              </div>
             )}
           </div>
         ) : (
