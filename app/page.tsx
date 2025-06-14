@@ -22,6 +22,18 @@ export default function Home() {
   const [filter, setFilter] = useState<'all' | 'read' | 'stocked' | 'unread'>('all');
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // Helper function to remove duplicate tasks by ID
+  const removeDuplicateTasks = (tasks: Task[]): Task[] => {
+    const seen = new Set<string>();
+    return tasks.filter(task => {
+      if (seen.has(task.id)) {
+        return false;
+      }
+      seen.add(task.id);
+      return true;
+    });
+  };
+
   // Initialize app
   useEffect(() => {
     initializeApp();
@@ -36,7 +48,7 @@ export default function Home() {
       setSettings(savedSettings);
       
       const savedTasks = await dbManager.getTasks();
-      setTasks(savedTasks);
+      setTasks(removeDuplicateTasks(savedTasks));
 
       // Register service worker
       if ('serviceWorker' in navigator) {
@@ -112,12 +124,16 @@ export default function Home() {
         }
 
         if (loadMore) {
-          // Append to existing tasks
-          setTasks(prev => [...prev, ...mergedTasks]);
+          // Append to existing tasks, avoiding duplicates
+          setTasks(prev => {
+            const existingIds = new Set(prev.map(task => task.id));
+            const newTasks = mergedTasks.filter(task => !existingIds.has(task.id));
+            return [...prev, ...newTasks];
+          });
         } else {
           // Replace with new tasks + reload from DB to get complete list
           const allTasks = await dbManager.getTasks();
-          setTasks(allTasks);
+          setTasks(removeDuplicateTasks(allTasks));
         }
         
         setHasMoreTasks(result.hasMore);
@@ -154,7 +170,10 @@ export default function Home() {
 
   // Filtered tasks
   const filteredTasks = useMemo(() => {
-    let filtered = tasks;
+    // First, remove duplicates by ID
+    const uniqueTasks = removeDuplicateTasks(tasks);
+
+    let filtered = uniqueTasks;
 
     // Apply search filter
     if (searchQuery.trim()) {
