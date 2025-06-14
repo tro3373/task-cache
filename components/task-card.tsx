@@ -70,16 +70,23 @@ export function TaskCard({ task, onToggleRead, onToggleStock, onDelete, onShare 
       task.read && "opacity-60"
     )}>
       {(task.imageUrl || task.ogpImageUrl) && !imageError && (
-        <div className="aspect-video w-full overflow-hidden relative">
+        <div 
+          className={cn(
+            "aspect-video w-full overflow-hidden relative",
+            (task.url || task.notionPageUrl) && "cursor-pointer"
+          )}
+          onClick={handleTitleClick}
+        >
           <img
             src={task.ogpImageUrl || task.imageUrl}
             alt={task.title}
             className="w-full h-full object-cover transition-transform duration-200 hover:scale-105"
             onError={() => setImageError(true)}
           />
-          {task.ogpImageUrl && (
-            <div className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-              OGP
+          {/* Click indicator for linked images */}
+          {(task.url || task.notionPageUrl) && (
+            <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors duration-200 flex items-center justify-center">
+              <ExternalLink className="h-8 w-8 text-white opacity-0 hover:opacity-80 transition-opacity duration-200 drop-shadow-lg" />
             </div>
           )}
         </div>
