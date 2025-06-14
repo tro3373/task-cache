@@ -21,6 +21,7 @@ export interface AppSettings {
   googleTasksCredentials?: string;
   proxyServerUrl?: string;
   lastSyncAt?: Date;
+  lastSyncCursor?: string;
 }
 
 class IndexedDBManager {
