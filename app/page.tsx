@@ -16,6 +16,8 @@ export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [settings, setSettings] = useState<AppSettings>({ backendType: null });
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMoreTasks, setHasMoreTasks] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'read' | 'stocked' | 'unread'>('all');
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -48,11 +50,15 @@ export default function Home() {
     }
   };
 
-  // Sync data with backend
-  const syncData = useCallback(async () => {
+  // Sync data with backend (incremental)
+  const syncData = useCallback(async (loadMore = false) => {
     if (!settings.backendType) {
       toast.error('バックエンドサービスが設定されていません');
       return;
+    }
+
+    if (loadMore) {
+      setIsLoadingMore(true);
     }
 
     try {
@@ -74,13 +80,20 @@ export default function Home() {
 
       if (!apiClient) return;
 
-      const fetchedTasks = await apiClient.fetchTasks();
+      // For incremental sync, use lastSyncAt for filtering
+      // For pagination, use lastSyncCursor
+      const result = await apiClient.fetchTasks(
+        loadMore ? undefined : settings.lastSyncAt,
+        loadMore ? settings.lastSyncCursor : undefined,
+        20
+      );
       
-      if (fetchedTasks.length > 0) {
-        // Merge with existing tasks, preserving local state (read, stocked)
-        const existingTasksMap = new Map(tasks.map(task => [task.sourceId, task]));
+      if (result.tasks.length > 0) {
+        // Get existing tasks from IndexedDB to preserve local state
+        const allExistingTasks = await dbManager.getTasks();
+        const existingTasksMap = new Map(allExistingTasks.map(task => [task.sourceId, task]));
         
-        const mergedTasks = fetchedTasks.map(fetchedTask => {
+        const mergedTasks = result.tasks.map(fetchedTask => {
           const existing = existingTasksMap.get(fetchedTask.sourceId);
           return existing ? {
             ...fetchedTask,
@@ -98,20 +111,42 @@ export default function Home() {
           }
         }
 
-        setTasks(mergedTasks);
-        toast.success(`${fetchedTasks.length}件のタスクを同期しました`);
+        if (loadMore) {
+          // Append to existing tasks
+          setTasks(prev => [...prev, ...mergedTasks]);
+        } else {
+          // Replace with new tasks + reload from DB to get complete list
+          const allTasks = await dbManager.getTasks();
+          setTasks(allTasks);
+        }
         
-        // Update last sync time
-        await dbManager.saveSettings({
+        setHasMoreTasks(result.hasMore);
+        
+        if (!loadMore) {
+          toast.success(`${result.tasks.length}件のタスクを同期しました`);
+        }
+        
+        // Update sync settings
+        const newSettings = {
           ...settings,
           lastSyncAt: new Date(),
-        });
+          lastSyncCursor: result.nextCursor,
+        };
+        await dbManager.saveSettings(newSettings);
+        setSettings(newSettings);
       } else {
-        toast.info('新しいタスクはありませんでした');
+        if (!loadMore) {
+          toast.info('新しいタスクはありませんでした');
+        }
+        setHasMoreTasks(false);
       }
     } catch (error) {
       console.error('Sync failed:', error);
       toast.error('データの同期に失敗しました');
+    } finally {
+      if (loadMore) {
+        setIsLoadingMore(false);
+      }
     }
   }, [settings, tasks]);
 
@@ -187,6 +222,25 @@ export default function Home() {
     }
   };
 
+  // Infinite scroll handler
+  const handleScroll = useCallback(() => {
+    if (
+      window.innerHeight + document.documentElement.scrollTop >=
+      document.documentElement.offsetHeight - 1000 && // Load when 1000px from bottom
+      hasMoreTasks &&
+      !isLoadingMore &&
+      !isRefreshing
+    ) {
+      syncData(true); // Load more
+    }
+  }, [hasMoreTasks, isLoadingMore, isRefreshing, syncData]);
+
+  // Add scroll listener
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
   const unreadCount = tasks.filter(task => !task.read).length;
 
   if (isLoading) {
@@ -248,18 +302,35 @@ export default function Home() {
             )}
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredTasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onToggleRead={handleToggleRead}
-                onToggleStock={handleToggleStock}
-                onDelete={handleDelete}
-                onShare={handleShare}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {filteredTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onToggleRead={handleToggleRead}
+                  onToggleStock={handleToggleStock}
+                  onDelete={handleDelete}
+                  onShare={handleShare}
+                />
+              ))}
+            </div>
+            
+            {/* Loading more indicator */}
+            {isLoadingMore && (
+              <div className="flex items-center justify-center py-8">
+                <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+                <span>さらに読み込み中...</span>
+              </div>
+            )}
+            
+            {/* No more data indicator */}
+            {!hasMoreTasks && filteredTasks.length > 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                すべてのタスクを表示しました
+              </div>
+            )}
+          </>
         )}
       </main>
 
