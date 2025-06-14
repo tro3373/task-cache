@@ -15,6 +15,7 @@ export interface Task {
   url?: string;
   iconUrl?: string;
   notionPageUrl?: string;
+  ogpImageUrl?: string;
 }
 
 export interface AppSettings {

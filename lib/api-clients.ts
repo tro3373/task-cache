@@ -25,6 +25,39 @@ export class NotionAPIClient implements APIClient {
     return this.proxyUrl ? `${this.proxyUrl}${encodeURIComponent(url)}` : url;
   }
 
+  private async fetchOGPImage(url: string): Promise<string | undefined> {
+    if (!this.proxyUrl || !url) return undefined;
+    
+    try {
+      // Extract base URL from proxy URL using URL object
+      // Input: https://cors-proxy-coral.vercel.app/api/?url=
+      // Output: https://cors-proxy-coral.vercel.app
+      const proxyUrlObj = new URL(this.proxyUrl);
+      const baseUrl = `${proxyUrlObj.protocol}//${proxyUrlObj.host}`;
+      
+      // Use direct OGP endpoint (not through proxy)
+      const ogpUrl = `${baseUrl}/api/ogp?url=${encodeURIComponent(url)}`;
+      
+      console.log('Original proxy URL:', this.proxyUrl);
+      console.log('Extracted base URL:', baseUrl);
+      console.log('Fetching OGP image from:', ogpUrl);
+      
+      const response = await fetch(ogpUrl);
+      if (!response.ok) {
+        console.log('OGP fetch failed:', response.status, response.statusText);
+        return undefined;
+      }
+      
+      const data = await response.json();
+      console.log('OGP response:', data);
+      
+      return data.image;
+    } catch (error) {
+      console.error('Failed to fetch OGP image:', error);
+      return undefined;
+    }
+  }
+
   async authenticate(): Promise<boolean> {
     try {
       const url = this.buildUrl(`https://api.notion.com/v1/databases/${this.databaseId}`);
@@ -81,8 +114,13 @@ export class NotionAPIClient implements APIClient {
 
       const data = await response.json();
       
+      // Map pages to tasks with OGP image fetching
+      const tasks = await Promise.all(
+        data.results.map(page => this.mapNotionPageToTask(page))
+      );
+
       return {
-        tasks: data.results.map(this.mapNotionPageToTask.bind(this)),
+        tasks,
         hasMore: data.has_more || false,
         nextCursor: data.next_cursor || undefined,
       };
@@ -124,7 +162,7 @@ export class NotionAPIClient implements APIClient {
     });
 
     const data = await response.json();
-    return this.mapNotionPageToTask(data);
+    return await this.mapNotionPageToTask(data);
   }
 
   async updateTask(task: Task): Promise<Task> {
@@ -155,7 +193,7 @@ export class NotionAPIClient implements APIClient {
     });
 
     const data = await response.json();
-    return this.mapNotionPageToTask(data);
+    return await this.mapNotionPageToTask(data);
   }
 
   async deleteTask(id: string): Promise<void> {
@@ -173,7 +211,8 @@ export class NotionAPIClient implements APIClient {
     });
   }
 
-  private mapNotionPageToTask(page: any): Task {
+
+  private async mapNotionPageToTask(page: any): Promise<Task> {
     const task = {
       id: page.id,
       sourceId: page.id,
@@ -188,16 +227,22 @@ export class NotionAPIClient implements APIClient {
       author: page.created_by?.name || 'Unknown',
       tags: page.properties.タグ?.multi_select?.map((tag: any) => tag.name) || [],
       url: page.properties.URL?.url || undefined,
-      iconUrl: page.icon?.external?.url || page.icon?.emoji || undefined,
+      iconUrl: undefined, // Disabled icon functionality
       notionPageUrl: page.url,
+      ogpImageUrl: undefined, // Will be set below
     };
+
+    // Fetch OGP image if URL exists
+    if (task.url) {
+      task.ogpImageUrl = await this.fetchOGPImage(task.url);
+    }
     
     console.log('Mapping Notion page to task:', {
       title: task.title,
       url: task.url,
       notionPageUrl: task.notionPageUrl,
-      iconUrl: task.iconUrl,
-      tags: task.tags
+      tags: task.tags,
+      ogpImageUrl: task.ogpImageUrl
     });
     
     return task;

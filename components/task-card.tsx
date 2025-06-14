@@ -69,38 +69,25 @@ export function TaskCard({ task, onToggleRead, onToggleStock, onDelete, onShare 
       "bg-card/50 backdrop-blur-sm",
       task.read && "opacity-60"
     )}>
-      {task.imageUrl && !imageError && (
-        <div className="aspect-video w-full overflow-hidden">
+      {(task.imageUrl || task.ogpImageUrl) && !imageError && (
+        <div className="aspect-video w-full overflow-hidden relative">
           <img
-            src={task.imageUrl}
+            src={task.ogpImageUrl || task.imageUrl}
             alt={task.title}
             className="w-full h-full object-cover transition-transform duration-200 hover:scale-105"
             onError={() => setImageError(true)}
           />
+          {task.ogpImageUrl && (
+            <div className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+              OGP
+            </div>
+          )}
         </div>
       )}
       
       <div className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-2 flex-1">
-            {/* Icon display */}
-            {task.iconUrl && (
-              <div className="shrink-0 mt-0.5">
-                {task.iconUrl.startsWith('http') ? (
-                  <img 
-                    src={task.iconUrl} 
-                    alt="" 
-                    className="w-5 h-5 rounded object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <span className="text-lg leading-none">{task.iconUrl}</span>
-                )}
-              </div>
-            )}
-            
             {/* Title - clickable if URL or notionPageUrl exists */}
             <h3 
               className={cn(
