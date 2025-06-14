@@ -44,6 +44,7 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
 
   const loadSettings = async () => {
     try {
+      await dbManager.init();
       const savedSettings = await dbManager.getSettings();
       setSettings(savedSettings);
     } catch (error) {
@@ -55,6 +56,7 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
   const handleSave = async () => {
     setIsLoading(true);
     try {
+      await dbManager.init();
       await dbManager.saveSettings(settings);
       toast.success('設定を保存しました');
       onOpenChange(false);
@@ -72,34 +74,18 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
       return;
     }
 
-    setIsLoading(true);
-    try {
-      if (settings.backendType === 'notion') {
-        if (!settings.notionApiKey || !settings.notionDatabaseId) {
-          toast.error('Notion APIキーとデータベースIDを入力してください');
-          return;
-        }
-        
-        const response = await fetch('https://api.notion.com/v1/users/me', {
-          headers: {
-            'Authorization': `Bearer ${settings.notionApiKey}`,
-            'Notion-Version': '2022-06-28',
-          },
-        });
-        
-        if (response.ok) {
-          toast.success('Notionへの接続に成功しました');
-        } else {
-          toast.error('Notionへの接続に失敗しました');
-        }
-      } else if (settings.backendType === 'google-tasks') {
-        // Google Tasks connection test would go here
-        toast.success('Google Tasksの設定を確認しました');
+    if (settings.backendType === 'notion') {
+      if (!settings.notionApiKey || !settings.notionDatabaseId) {
+        toast.error('Notion APIキーとデータベースIDを入力してください');
+        return;
       }
-    } catch (error) {
-      toast.error('接続テストでエラーが発生しました');
-    } finally {
-      setIsLoading(false);
+      toast.info('設定を保存後、データ同期時に接続を確認します');
+    } else if (settings.backendType === 'google-tasks') {
+      if (!settings.googleTasksCredentials) {
+        toast.error('Google Tasks認証情報を入力してください');
+        return;
+      }
+      toast.info('設定を保存後、データ同期時に接続を確認します');
     }
   };
 

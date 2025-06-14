@@ -16,7 +16,7 @@ export class NotionAPIClient implements APIClient {
 
   async authenticate(): Promise<boolean> {
     try {
-      const response = await fetch('https://api.notion.com/v1/users/me', {
+      const response = await fetch(`https://api.notion.com/v1/databases/${this.databaseId}`, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Notion-Version': '2022-06-28',
