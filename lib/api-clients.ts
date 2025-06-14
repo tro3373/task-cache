@@ -46,7 +46,7 @@ export class NotionAPIClient implements APIClient {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          sorts: [{ property: 'Created', direction: 'descending' }],
+          sorts: [{ property: '作成日時', direction: 'descending' }],
         }),
       });
 
@@ -74,14 +74,17 @@ export class NotionAPIClient implements APIClient {
       body: JSON.stringify({
         parent: { database_id: this.databaseId },
         properties: {
-          Title: {
+          名前: {
             title: [{ text: { content: task.title || '' } }],
           },
-          Completed: {
-            checkbox: task.completed || false,
-          },
-          Description: {
+          テキスト: {
             rich_text: [{ text: { content: task.description || '' } }],
+          },
+          Stock: {
+            checkbox: task.stocked || false,
+          },
+          既読: {
+            checkbox: task.read || false,
           },
         },
       }),
@@ -102,14 +105,17 @@ export class NotionAPIClient implements APIClient {
       },
       body: JSON.stringify({
         properties: {
-          Title: {
+          名前: {
             title: [{ text: { content: task.title } }],
           },
-          Completed: {
-            checkbox: task.completed,
-          },
-          Description: {
+          テキスト: {
             rich_text: [{ text: { content: task.description || '' } }],
+          },
+          Stock: {
+            checkbox: task.stocked,
+          },
+          既読: {
+            checkbox: task.read,
           },
         },
       }),
@@ -138,11 +144,11 @@ export class NotionAPIClient implements APIClient {
     return {
       id: page.id,
       sourceId: page.id,
-      title: page.properties.Title?.title?.[0]?.text?.content || 'Untitled',
-      description: page.properties.Description?.rich_text?.[0]?.text?.content || '',
-      completed: page.properties.Completed?.checkbox || false,
-      stocked: false,
-      read: false,
+      title: page.properties.名前?.title?.[0]?.text?.content || 'Untitled',
+      description: page.properties.テキスト?.rich_text?.[0]?.text?.content || '',
+      completed: false, // No completion status in this database
+      stocked: page.properties.Stock?.checkbox || false,
+      read: page.properties.既読?.checkbox || false,
       createdAt: new Date(page.created_time),
       updatedAt: new Date(page.last_edited_time),
       source: 'notion' as const,
