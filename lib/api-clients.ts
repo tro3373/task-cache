@@ -174,7 +174,7 @@ export class NotionAPIClient implements APIClient {
   }
 
   private mapNotionPageToTask(page: any): Task {
-    return {
+    const task = {
       id: page.id,
       sourceId: page.id,
       title: page.properties.名前?.title?.[0]?.text?.content || 'Untitled',
@@ -186,7 +186,21 @@ export class NotionAPIClient implements APIClient {
       updatedAt: new Date(page.last_edited_time),
       source: 'notion' as const,
       author: page.created_by?.name || 'Unknown',
+      tags: page.properties.タグ?.multi_select?.map((tag: any) => tag.name) || [],
+      url: page.properties.URL?.url || undefined,
+      iconUrl: page.icon?.external?.url || page.icon?.emoji || undefined,
+      notionPageUrl: page.url,
     };
+    
+    console.log('Mapping Notion page to task:', {
+      title: task.title,
+      url: task.url,
+      notionPageUrl: task.notionPageUrl,
+      iconUrl: task.iconUrl,
+      tags: task.tags
+    });
+    
+    return task;
   }
 }
 

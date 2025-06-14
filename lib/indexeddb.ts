@@ -12,6 +12,9 @@ export interface Task {
   tags?: string[];
   author?: string;
   imageUrl?: string;
+  url?: string;
+  iconUrl?: string;
+  notionPageUrl?: string;
 }
 
 export interface AppSettings {
