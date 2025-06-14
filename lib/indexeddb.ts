@@ -19,6 +19,7 @@ export interface AppSettings {
   notionApiKey?: string;
   notionDatabaseId?: string;
   googleTasksCredentials?: string;
+  proxyServerUrl?: string;
   lastSyncAt?: Date;
 }
 

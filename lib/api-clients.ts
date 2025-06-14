@@ -11,12 +11,18 @@ export interface APIClient {
 export class NotionAPIClient implements APIClient {
   constructor(
     private apiKey: string,
-    private databaseId: string
+    private databaseId: string,
+    private proxyUrl?: string
   ) {}
+
+  private buildUrl(url: string): string {
+    return this.proxyUrl ? `${this.proxyUrl}${encodeURIComponent(url)}` : url;
+  }
 
   async authenticate(): Promise<boolean> {
     try {
-      const response = await fetch(`https://api.notion.com/v1/databases/${this.databaseId}`, {
+      const url = this.buildUrl(`https://api.notion.com/v1/databases/${this.databaseId}`);
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Notion-Version': '2022-06-28',
@@ -31,7 +37,8 @@ export class NotionAPIClient implements APIClient {
 
   async fetchTasks(): Promise<Task[]> {
     try {
-      const response = await fetch(`https://api.notion.com/v1/databases/${this.databaseId}/query`, {
+      const url = this.buildUrl(`https://api.notion.com/v1/databases/${this.databaseId}/query`);
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
@@ -56,7 +63,8 @@ export class NotionAPIClient implements APIClient {
   }
 
   async createTask(task: Partial<Task>): Promise<Task> {
-    const response = await fetch('https://api.notion.com/v1/pages', {
+    const url = this.buildUrl('https://api.notion.com/v1/pages');
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
@@ -84,7 +92,8 @@ export class NotionAPIClient implements APIClient {
   }
 
   async updateTask(task: Task): Promise<Task> {
-    const response = await fetch(`https://api.notion.com/v1/pages/${task.sourceId}`, {
+    const url = this.buildUrl(`https://api.notion.com/v1/pages/${task.sourceId}`);
+    const response = await fetch(url, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
@@ -111,7 +120,8 @@ export class NotionAPIClient implements APIClient {
   }
 
   async deleteTask(id: string): Promise<void> {
-    await fetch(`https://api.notion.com/v1/pages/${id}`, {
+    const url = this.buildUrl(`https://api.notion.com/v1/pages/${id}`);
+    await fetch(url, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
@@ -142,7 +152,14 @@ export class NotionAPIClient implements APIClient {
 }
 
 export class GoogleTasksAPIClient implements APIClient {
-  constructor(private credentials: string) {}
+  constructor(
+    private credentials: string,
+    private proxyUrl?: string
+  ) {}
+
+  private buildUrl(url: string): string {
+    return this.proxyUrl ? `${this.proxyUrl}${encodeURIComponent(url)}` : url;
+  }
 
   async authenticate(): Promise<boolean> {
     // In a real implementation, this would handle OAuth2 flow

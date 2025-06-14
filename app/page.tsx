@@ -63,13 +63,13 @@ export default function Home() {
           toast.error('Notionの設定が不完全です');
           return;
         }
-        apiClient = new NotionAPIClient(settings.notionApiKey, settings.notionDatabaseId);
+        apiClient = new NotionAPIClient(settings.notionApiKey, settings.notionDatabaseId, settings.proxyServerUrl);
       } else if (settings.backendType === 'google-tasks') {
         if (!settings.googleTasksCredentials) {
           toast.error('Google Tasksの設定が不完全です');
           return;
         }
-        apiClient = new GoogleTasksAPIClient(settings.googleTasksCredentials);
+        apiClient = new GoogleTasksAPIClient(settings.googleTasksCredentials, settings.proxyServerUrl);
       }
 
       if (!apiClient) return;

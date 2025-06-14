@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { AppSettings, dbManager } from '@/lib/indexeddb';
+import { NotionAPIClient, GoogleTasksAPIClient } from '@/lib/api-clients';
 import { Settings, Database, Key, Download } from 'lucide-react';
 import { usePWAInstall } from '@/hooks/use-pwa-install';
 import { toast } from 'sonner';
@@ -74,18 +75,41 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
       return;
     }
 
-    if (settings.backendType === 'notion') {
-      if (!settings.notionApiKey || !settings.notionDatabaseId) {
-        toast.error('Notion APIキーとデータベースIDを入力してください');
-        return;
+    setIsLoading(true);
+    try {
+      if (settings.backendType === 'notion') {
+        if (!settings.notionApiKey || !settings.notionDatabaseId) {
+          toast.error('Notion APIキーとデータベースIDを入力してください');
+          return;
+        }
+        
+        const client = new NotionAPIClient(settings.notionApiKey, settings.notionDatabaseId, settings.proxyServerUrl);
+        const isAuthenticated = await client.authenticate();
+        
+        if (isAuthenticated) {
+          toast.success('Notionへの接続に成功しました');
+        } else {
+          toast.error('Notionへの接続に失敗しました');
+        }
+      } else if (settings.backendType === 'google-tasks') {
+        if (!settings.googleTasksCredentials) {
+          toast.error('Google Tasks認証情報を入力してください');
+          return;
+        }
+        
+        const client = new GoogleTasksAPIClient(settings.googleTasksCredentials, settings.proxyServerUrl);
+        const isAuthenticated = await client.authenticate();
+        
+        if (isAuthenticated) {
+          toast.success('Google Tasksへの接続に成功しました');
+        } else {
+          toast.error('Google Tasksへの接続に失敗しました');
+        }
       }
-      toast.info('設定を保存後、データ同期時に接続を確認します');
-    } else if (settings.backendType === 'google-tasks') {
-      if (!settings.googleTasksCredentials) {
-        toast.error('Google Tasks認証情報を入力してください');
-        return;
-      }
-      toast.info('設定を保存後、データ同期時に接続を確認します');
+    } catch (error) {
+      toast.error('接続テストでエラーが発生しました');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -120,6 +144,26 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
               </div>
             </div>
           )}
+
+          {/* Proxy Server Settings */}
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">プロキシサーバー設定（オプション）</Label>
+            <div className="space-y-2">
+              <Label htmlFor="proxy-server-url">プロキシサーバーURL</Label>
+              <Input
+                id="proxy-server-url"
+                placeholder="https://proxy.example.com/api?url="
+                value={settings.proxyServerUrl || ''}
+                onChange={(e) => setSettings(prev => ({ 
+                  ...prev, 
+                  proxyServerUrl: e.target.value 
+                }))}
+              />
+              <p className="text-xs text-muted-foreground">
+                CORS制限を回避するためのプロキシサーバーURLを設定します。末尾に「?url=」を含めてください。
+              </p>
+            </div>
+          </div>
 
           {/* Backend Selection */}
           <div className="space-y-3">
