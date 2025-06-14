@@ -15,6 +15,17 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -248,38 +259,66 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
           )}
 
           {/* Clear Local Data */}
-          <Button
-            variant="destructive"
-            onClick={async () => {
-              try {
-                await dbManager.init();
-                
-                // Clear tasks data
-                const db = (dbManager as any).db;
-                const transaction = db.transaction(['tasks'], 'readwrite');
-                const store = transaction.objectStore('tasks');
-                await store.clear();
-                
-                // Reset lastSync settings while keeping other settings
-                const currentSettings = await dbManager.getSettings();
-                const newSettings = {
-                  ...currentSettings,
-                  lastSyncAt: undefined,
-                  lastSyncCursor: undefined,
-                };
-                await dbManager.saveSettings(newSettings);
-                
-                toast.success('データをクリアしました');
-                window.location.reload(); // Reload to reflect changes
-              } catch (error) {
-                toast.error('データクリアに失敗しました');
-              }
-            }}
-            className="w-full"
-          >
-            <Database className="h-4 w-4 mr-2" />
-            データをクリア
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="destructive"
+                className="w-full"
+              >
+                <Database className="h-4 w-4 mr-2" />
+                データをクリア
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>データをクリアしますか？</AlertDialogTitle>
+                <AlertDialogDescription>
+                  この操作により、以下のデータが削除されます：
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    <li>すべてのタスクデータ</li>
+                    <li>既読・ストック状態</li>
+                    <li>最終同期情報</li>
+                  </ul>
+                  <p className="mt-3 font-semibold">
+                    この操作は取り消すことができません。
+                  </p>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={async () => {
+                    try {
+                      await dbManager.init();
+                      
+                      // Clear tasks data
+                      const db = (dbManager as any).db;
+                      const transaction = db.transaction(['tasks'], 'readwrite');
+                      const store = transaction.objectStore('tasks');
+                      await store.clear();
+                      
+                      // Reset lastSync settings while keeping other settings
+                      const currentSettings = await dbManager.getSettings();
+                      const newSettings = {
+                        ...currentSettings,
+                        lastSyncAt: undefined,
+                        lastSyncCursor: undefined,
+                      };
+                      await dbManager.saveSettings(newSettings);
+                      
+                      toast.success('データをクリアしました');
+                      window.location.reload(); // Reload to reflect changes
+                    } catch (error) {
+                      toast.error('データクリアに失敗しました');
+                    }
+                  }}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  データをクリア
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         <DialogFooter>
