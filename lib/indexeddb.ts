@@ -23,7 +23,7 @@ export interface AppSettings {
 }
 
 class IndexedDBManager {
-  private dbName = 'TaskSyncDB';
+  private dbName = 'TaskCacheDB';
   private version = 1;
   private db: IDBDatabase | null = null;
 

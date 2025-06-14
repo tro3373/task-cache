@@ -7,7 +7,7 @@ import { ThemeProvider } from 'next-themes';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'TaskSync - Universal Task Manager',
+  title: 'TaskCache - Universal Task Manager',
   description: 'Sync and manage tasks from Notion and Google Tasks',
   manifest: '/manifest.json',
   themeColor: '#3b82f6',
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'TaskSync',
+    title: 'TaskCache',
   },
 };
 

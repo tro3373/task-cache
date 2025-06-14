@@ -47,7 +47,7 @@ export function Header({
         <div className="container flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-4">
             <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-              TaskSync
+              TaskCache
             </h1>
             {totalTasks > 0 && (
               <div className="flex items-center gap-2">

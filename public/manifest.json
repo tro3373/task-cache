@@ -1,6 +1,6 @@
 {
-  "name": "TaskSync - Universal Task Manager",
-  "short_name": "TaskSync",
+  "name": "TaskCache - Universal Task Manager",
+  "short_name": "TaskCache",
   "description": "Sync and manage tasks from Notion and Google Tasks",
   "start_url": "/",
   "display": "standalone",
