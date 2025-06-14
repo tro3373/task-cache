@@ -315,41 +315,25 @@ export default function Home() {
               }
             </p>
             {tasks.length === 0 && (
-              <div className="flex gap-2">
-                <Button 
-                  onClick={syncData} 
-                  disabled={isRefreshing}
-                  className={`relative overflow-hidden ${
-                    isRefreshing ? 'bg-primary/10 animate-sync-pulse' : ''
-                  }`}
-                >
-                  {isRefreshing && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/20 to-transparent animate-shimmer -skew-x-12" />
-                  )}
-                  <RefreshCw className={`h-4 w-4 mr-2 transition-all duration-300 ${
-                    isRefreshing 
-                      ? 'animate-spin text-primary drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' 
-                      : 'hover:rotate-180'
-                  }`} />
-                  <span className={isRefreshing ? 'animate-pulse' : ''}>
-                    {isRefreshing ? '同期中...' : 'データを同期'}
-                  </span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={async () => {
-                    await dbManager.init();
-                    const db = (dbManager as any).db;
-                    const transaction = db.transaction(['tasks'], 'readwrite');
-                    const store = transaction.objectStore('tasks');
-                    await store.clear();
-                    setTasks([]);
-                    toast.success('ローカルデータをクリアしました');
-                  }}
-                >
-                  データクリア
-                </Button>
-              </div>
+              <Button 
+                onClick={syncData} 
+                disabled={isRefreshing}
+                className={`relative overflow-hidden ${
+                  isRefreshing ? 'bg-primary/10 animate-sync-pulse' : ''
+                }`}
+              >
+                {isRefreshing && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/20 to-transparent animate-shimmer -skew-x-12" />
+                )}
+                <RefreshCw className={`h-4 w-4 mr-2 transition-all duration-300 ${
+                  isRefreshing 
+                    ? 'animate-spin text-primary drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' 
+                    : 'hover:rotate-180'
+                }`} />
+                <span className={isRefreshing ? 'animate-pulse' : ''}>
+                  {isRefreshing ? '同期中...' : 'データを同期'}
+                </span>
+              </Button>
             )}
           </div>
         ) : (
