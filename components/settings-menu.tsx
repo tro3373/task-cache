@@ -253,11 +253,23 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
             onClick={async () => {
               try {
                 await dbManager.init();
+                
+                // Clear tasks data
                 const db = (dbManager as any).db;
                 const transaction = db.transaction(['tasks'], 'readwrite');
                 const store = transaction.objectStore('tasks');
                 await store.clear();
-                toast.success('ローカルデータをクリアしました');
+                
+                // Reset lastSync settings while keeping other settings
+                const currentSettings = await dbManager.getSettings();
+                const newSettings = {
+                  ...currentSettings,
+                  lastSyncAt: undefined,
+                  lastSyncCursor: undefined,
+                };
+                await dbManager.saveSettings(newSettings);
+                
+                toast.success('データをクリアしました');
                 window.location.reload(); // Reload to reflect changes
               } catch (error) {
                 toast.error('データクリアに失敗しました');
@@ -266,7 +278,7 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
             className="w-full"
           >
             <Database className="h-4 w-4 mr-2" />
-            ローカルデータをクリア
+            データをクリア
           </Button>
         </div>
 

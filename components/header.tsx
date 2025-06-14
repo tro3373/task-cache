@@ -69,10 +69,21 @@ export function Header({
               size="sm"
               onClick={onRefresh}
               disabled={isRefreshing}
-              className="hidden sm:flex"
+              className={`hidden sm:flex relative overflow-hidden ${
+                isRefreshing ? 'bg-primary/10 animate-pulse' : ''
+              }`}
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-              更新
+              {isRefreshing && (
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/20 to-transparent animate-[shimmer_2s_infinite] -skew-x-12" />
+              )}
+              <RefreshCw className={`h-4 w-4 mr-2 transition-all duration-300 ${
+                isRefreshing 
+                  ? 'animate-spin text-primary drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' 
+                  : 'hover:rotate-180'
+              }`} />
+              <span className={isRefreshing ? 'animate-pulse' : ''}>
+                {isRefreshing ? '同期中...' : '更新'}
+              </span>
             </Button>
 
             <DropdownMenu>
@@ -82,9 +93,15 @@ export function Header({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={onRefresh} disabled={isRefreshing}>
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  データ更新
+                <DropdownMenuItem onClick={onRefresh} disabled={isRefreshing} className={isRefreshing ? 'bg-primary/5' : ''}>
+                  <RefreshCw className={`h-4 w-4 mr-2 transition-all duration-300 ${
+                    isRefreshing 
+                      ? 'animate-spin text-primary drop-shadow-[0_0_6px_rgba(59,130,246,0.4)]' 
+                      : 'hover:rotate-180'
+                  }`} />
+                  <span className={isRefreshing ? 'animate-pulse' : ''}>
+                    {isRefreshing ? '同期中...' : 'データ更新'}
+                  </span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => onFilterChange('all')}>

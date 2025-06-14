@@ -297,9 +297,24 @@ export default function Home() {
             </p>
             {tasks.length === 0 && (
               <div className="flex gap-2">
-                <Button onClick={syncData} disabled={isRefreshing}>
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  データを同期
+                <Button 
+                  onClick={syncData} 
+                  disabled={isRefreshing}
+                  className={`relative overflow-hidden ${
+                    isRefreshing ? 'bg-primary/10 animate-sync-pulse' : ''
+                  }`}
+                >
+                  {isRefreshing && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/20 to-transparent animate-shimmer -skew-x-12" />
+                  )}
+                  <RefreshCw className={`h-4 w-4 mr-2 transition-all duration-300 ${
+                    isRefreshing 
+                      ? 'animate-spin text-primary drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' 
+                      : 'hover:rotate-180'
+                  }`} />
+                  <span className={isRefreshing ? 'animate-pulse' : ''}>
+                    {isRefreshing ? '同期中...' : 'データを同期'}
+                  </span>
                 </Button>
                 <Button 
                   variant="outline" 
@@ -336,8 +351,16 @@ export default function Home() {
             {/* Loading more indicator */}
             {isLoadingMore && (
               <div className="flex items-center justify-center py-8">
-                <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-                <span>さらに読み込み中...</span>
+                <div className="relative">
+                  <RefreshCw className="h-6 w-6 animate-spin mr-2 text-primary drop-shadow-[0_0_8px_rgba(59,130,246,0.4)]" />
+                  <div className="absolute inset-0 h-6 w-6 rounded-full bg-primary/20 blur-md animate-pulse mr-2" />
+                </div>
+                <span className="animate-pulse font-medium text-primary">さらに読み込み中...</span>
+                <div className="ml-2 flex space-x-1">
+                  <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" />
+                  <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                  <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                </div>
               </div>
             )}
             
