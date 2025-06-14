@@ -1,8 +1,14 @@
 import { Task } from './indexeddb';
 
+export interface FetchTasksResult {
+  tasks: Task[];
+  hasMore: boolean;
+  nextCursor?: string;
+}
+
 export interface APIClient {
   authenticate(): Promise<boolean>;
-  fetchTasks(): Promise<Task[]>;
+  fetchTasks(lastSyncAt?: Date, startCursor?: string, pageSize?: number): Promise<FetchTasksResult>;
   createTask(task: Partial<Task>): Promise<Task>;
   updateTask(task: Task): Promise<Task>;
   deleteTask(id: string): Promise<void>;
@@ -35,9 +41,30 @@ export class NotionAPIClient implements APIClient {
     }
   }
 
-  async fetchTasks(): Promise<Task[]> {
+  async fetchTasks(lastSyncAt?: Date, startCursor?: string, pageSize: number = 50): Promise<FetchTasksResult> {
     try {
       const url = this.buildUrl(`https://api.notion.com/v1/databases/${this.databaseId}/query`);
+      
+      const requestBody: any = {
+        sorts: [{ property: '作成日時', direction: 'descending' }],
+        page_size: pageSize,
+      };
+
+      // Add start_cursor for pagination
+      if (startCursor) {
+        requestBody.start_cursor = startCursor;
+      }
+
+      // Add filter for incremental sync (created_time > lastSyncAt)
+      if (lastSyncAt && !startCursor) {
+        requestBody.filter = {
+          property: '作成日時',
+          created_time: {
+            after: lastSyncAt.toISOString(),
+          },
+        };
+      }
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -45,9 +72,7 @@ export class NotionAPIClient implements APIClient {
           'Notion-Version': '2022-06-28',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          sorts: [{ property: '作成日時', direction: 'descending' }],
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -55,10 +80,18 @@ export class NotionAPIClient implements APIClient {
       }
 
       const data = await response.json();
-      return data.results.map(this.mapNotionPageToTask);
+      
+      return {
+        tasks: data.results.map(this.mapNotionPageToTask.bind(this)),
+        hasMore: data.has_more || false,
+        nextCursor: data.next_cursor || undefined,
+      };
     } catch (error) {
       console.error('Failed to fetch Notion tasks:', error);
-      return [];
+      return {
+        tasks: [],
+        hasMore: false,
+      };
     }
   }
 
@@ -173,9 +206,12 @@ export class GoogleTasksAPIClient implements APIClient {
     return Promise.resolve(true);
   }
 
-  async fetchTasks(): Promise<Task[]> {
+  async fetchTasks(lastSyncAt?: Date, startCursor?: string, pageSize: number = 50): Promise<FetchTasksResult> {
     // Mock implementation - in reality, this would use Google Tasks API
-    return Promise.resolve([]);
+    return Promise.resolve({
+      tasks: [],
+      hasMore: false,
+    });
   }
 
   async createTask(task: Partial<Task>): Promise<Task> {
