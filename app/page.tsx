@@ -316,7 +316,7 @@ export default function Home() {
             </p>
             {tasks.length === 0 && (
               <Button 
-                onClick={syncData} 
+                onClick={() => syncData()} 
                 disabled={isRefreshing}
                 className={`relative overflow-hidden ${
                   isRefreshing ? 'bg-primary/10 animate-sync-pulse' : ''

@@ -116,7 +116,7 @@ export class NotionAPIClient implements APIClient {
       
       // Map pages to tasks with OGP image fetching
       const tasks = await Promise.all(
-        data.results.map(page => this.mapNotionPageToTask(page))
+        data.results.map((page: any) => this.mapNotionPageToTask(page))
       );
 
       return {
@@ -213,7 +213,7 @@ export class NotionAPIClient implements APIClient {
 
 
   private async mapNotionPageToTask(page: any): Promise<Task> {
-    const task = {
+    const task: Task = {
       id: page.id,
       sourceId: page.id,
       title: page.properties.名前?.title?.[0]?.text?.content || 'Untitled',
