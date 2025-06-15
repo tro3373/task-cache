@@ -38,7 +38,7 @@ export function ErrorDialog({
             <p>{message}</p>
             {details && (
               <div className="rounded-md bg-muted p-3">
-                <p className="font-mono text-xs whitespace-pre-wrap break-all">
+                <p className="whitespace-pre-wrap break-all font-mono text-xs">
                   {details}
                 </p>
               </div>

@@ -113,6 +113,7 @@ export class NotionAPIClient implements APIClient {
       if (lastSyncAt && !startCursor) {
         requestBody.filter = {
           property: '作成日時',
+          // biome-ignore lint/style/useNamingConvention: Notion API field
           created_time: {
             after: lastSyncAt.toISOString(),
           },
@@ -138,6 +139,7 @@ export class NotionAPIClient implements APIClient {
 
       // Map pages to tasks with OGP image fetching
       const tasks = await Promise.all(
+        // biome-ignore lint/suspicious/noExplicitAny: Notion API response
         data.results.map((page: any) => this.mapNotionPageToTask(page)),
       );
 
@@ -160,19 +162,23 @@ export class NotionAPIClient implements APIClient {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
+        // biome-ignore lint/style/useNamingConvention: HTTP header name
         Authorization: `Bearer ${this.apiKey}`,
         'Notion-Version': '2022-06-28',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        // biome-ignore lint/style/useNamingConvention: Notion API field
         parent: { database_id: this.databaseId },
         properties: {
           名前: {
             title: [{ text: { content: task.title || '' } }],
           },
           テキスト: {
+            // biome-ignore lint/style/useNamingConvention: Notion API field
             rich_text: [{ text: { content: task.description || '' } }],
           },
+          // biome-ignore lint/style/useNamingConvention: Notion API field
           Stock: {
             checkbox: task.stocked,
           },
@@ -194,6 +200,7 @@ export class NotionAPIClient implements APIClient {
     const response = await fetch(url, {
       method: 'PATCH',
       headers: {
+        // biome-ignore lint/style/useNamingConvention: HTTP header name
         Authorization: `Bearer ${this.apiKey}`,
         'Notion-Version': '2022-06-28',
         'Content-Type': 'application/json',
@@ -204,8 +211,10 @@ export class NotionAPIClient implements APIClient {
             title: [{ text: { content: task.title } }],
           },
           テキスト: {
+            // biome-ignore lint/style/useNamingConvention: Notion API field
             rich_text: [{ text: { content: task.description || '' } }],
           },
+          // biome-ignore lint/style/useNamingConvention: Notion API field
           Stock: {
             checkbox: task.stocked,
           },
@@ -225,6 +234,7 @@ export class NotionAPIClient implements APIClient {
     await fetch(url, {
       method: 'PATCH',
       headers: {
+        // biome-ignore lint/style/useNamingConvention: HTTP header name
         Authorization: `Bearer ${this.apiKey}`,
         'Notion-Version': '2022-06-28',
         'Content-Type': 'application/json',
@@ -235,6 +245,7 @@ export class NotionAPIClient implements APIClient {
     });
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Notion API response
   private async mapNotionPageToTask(page: any): Promise<Task> {
     const task: Task = {
       id: page.id,
@@ -250,6 +261,7 @@ export class NotionAPIClient implements APIClient {
       source: 'notion' as const,
       author: page.created_by?.name || 'Unknown',
       tags:
+        // biome-ignore lint/suspicious/noExplicitAny: Notion API structure
         page.properties.タグ?.multi_select?.map((tag: any) => tag.name) || [],
       url: page.properties.URL?.url || undefined,
       iconUrl: undefined, // Disabled icon functionality
@@ -275,10 +287,13 @@ export class NotionAPIClient implements APIClient {
 }
 
 export class GoogleTasksAPIClient implements APIClient {
-  constructor(
-    private credentials: string,
-    private proxyUrl?: string,
-  ) {}
+  private credentials: string;
+  private proxyUrl?: string;
+
+  constructor(credentials: string, proxyUrl?: string) {
+    this.credentials = credentials;
+    this.proxyUrl = proxyUrl;
+  }
 
   private buildUrl(url: string): string {
     return this.proxyUrl ? `${this.proxyUrl}${encodeURIComponent(url)}` : url;

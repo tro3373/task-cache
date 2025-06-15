@@ -91,7 +91,7 @@ export default function Home() {
       }
 
       try {
-        let apiClient;
+        let apiClient: NotionAPIClient | GoogleTasksAPIClient | undefined;
 
         if (settings.backendType === 'notion') {
           if (!(settings.notionApiKey && settings.notionDatabaseId)) {
@@ -200,31 +200,40 @@ export default function Home() {
         }
       } catch (error) {
         console.error('Sync failed:', error);
-        
+
         let errorMessage = 'データの同期に失敗しました';
         let errorDetails = '';
-        
+
         if (error instanceof Error) {
           if (error.message === 'Request timeout') {
             errorMessage = 'データの同期がタイムアウトしました';
-            errorDetails = 'ネットワーク接続を確認してください。プロキシサーバーを使用している場合は、設定を確認してください。';
+            errorDetails =
+              'ネットワーク接続を確認してください。プロキシサーバーを使用している場合は、設定を確認してください。';
           } else {
             errorDetails = error.message;
-            
+
             // Check for specific error patterns
-            if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+            if (
+              error.message.includes('401') ||
+              error.message.includes('Unauthorized')
+            ) {
               errorMessage = '認証エラーが発生しました';
-              errorDetails = 'APIキーまたは認証情報が正しくない可能性があります。設定を確認してください。';
+              errorDetails =
+                'APIキーまたは認証情報が正しくない可能性があります。設定を確認してください。';
             } else if (error.message.includes('404')) {
               errorMessage = 'リソースが見つかりません';
-              errorDetails = 'データベースIDまたはタスクリストが正しくない可能性があります。';
-            } else if (error.message.includes('CORS') || error.message.includes('fetch')) {
+              errorDetails =
+                'データベースIDまたはタスクリストが正しくない可能性があります。';
+            } else if (
+              error.message.includes('CORS') ||
+              error.message.includes('fetch')
+            ) {
               errorMessage = 'ネットワークエラーが発生しました';
               errorDetails = `${error.message}\n\nCORSエラーの場合は、プロキシサーバーの設定が必要です。`;
             }
           }
         }
-        
+
         // Show error dialog with details
         setErrorDialog({
           isOpen: true,
@@ -232,7 +241,7 @@ export default function Home() {
           message: 'エラーの詳細情報:',
           details: errorDetails || '不明なエラーが発生しました',
         });
-        
+
         toast.error(errorMessage);
       } finally {
         if (loadMore) {
@@ -242,7 +251,7 @@ export default function Home() {
         }
       }
     },
-    [settings, tasks],
+    [settings, removeDuplicateTasks],
   );
 
   const { isRefreshing, isPulling, pullDistance } = usePullToRefresh(syncData);
@@ -284,7 +293,7 @@ export default function Home() {
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
-  }, [tasks, searchQuery, filter]);
+  }, [tasks, searchQuery, filter, removeDuplicateTasks]);
 
   // Task actions
   const handleToggleRead = async (task: Task) => {
@@ -331,6 +340,22 @@ export default function Home() {
     }
   };
 
+  const handleSettingsChange = async (newSettings: AppSettings) => {
+    await dbManager.saveSettings(newSettings);
+    setSettings(newSettings);
+
+    // If backend type changed or settings were updated, trigger sync
+    if (
+      newSettings.backendType &&
+      (newSettings.backendType !== settings.backendType ||
+        newSettings.notionApiKey !== settings.notionApiKey ||
+        newSettings.notionDatabaseId !== settings.notionDatabaseId ||
+        newSettings.googleTasksCredentials !== settings.googleTasksCredentials)
+    ) {
+      await syncData();
+    }
+  };
+
   // Infinite scroll handler
   const handleScroll = useCallback(() => {
     if (
@@ -362,11 +387,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      <LoadingOverlay 
-        isLoading={isLoading && !isRefreshing} 
+      <LoadingOverlay
+        isLoading={isLoading && !isRefreshing}
         message="タスクを同期しています..."
       />
-      
+
       <PullToRefreshIndicator
         isVisible={isPulling}
         isRefreshing={isRefreshing}
@@ -486,13 +511,13 @@ export default function Home() {
         )}
       </main>
 
-      <SettingsMenu 
-        open={settingsOpen} 
+      <SettingsMenu
+        open={settingsOpen}
         onOpenChange={setSettingsOpen}
         settings={settings}
         onSettingsChange={handleSettingsChange}
       />
-      
+
       <ErrorDialog
         isOpen={errorDialog.isOpen}
         onClose={() => setErrorDialog({ ...errorDialog, isOpen: false })}
