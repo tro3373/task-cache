@@ -1,6 +1,7 @@
 'use client';
 
 import { Header } from '@/components/header';
+import { LoadingOverlay } from '@/components/loading-overlay';
 import { PullToRefreshIndicator } from '@/components/pull-to-refresh-indicator';
 import { SettingsMenu } from '@/components/settings-menu';
 import { TaskCard } from '@/components/task-card';
@@ -74,6 +75,8 @@ export default function Home() {
 
       if (loadMore) {
         setIsLoadingMore(true);
+      } else {
+        setIsLoading(true);
       }
 
       try {
@@ -104,13 +107,23 @@ export default function Home() {
           return;
         }
 
+        // Create timeout promise
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error('Request timeout'));
+          }, 30000); // 30 seconds timeout
+        });
+
         // For incremental sync, use lastSyncAt for filtering
         // For pagination, use lastSyncCursor
-        const result = await apiClient.fetchTasks(
+        const fetchPromise = apiClient.fetchTasks(
           loadMore ? undefined : settings.lastSyncAt,
           loadMore ? settings.lastSyncCursor : undefined,
           20,
         );
+
+        // Race between fetch and timeout
+        const result = await Promise.race([fetchPromise, timeoutPromise]);
 
         if (result.tasks.length > 0) {
           // Get existing tasks from IndexedDB to preserve local state
@@ -176,10 +189,16 @@ export default function Home() {
         }
       } catch (error) {
         console.error('Sync failed:', error);
-        toast.error('データの同期に失敗しました');
+        if (error instanceof Error && error.message === 'Request timeout') {
+          toast.error('データの同期がタイムアウトしました。ネットワーク接続を確認してください。');
+        } else {
+          toast.error('データの同期に失敗しました');
+        }
       } finally {
         if (loadMore) {
           setIsLoadingMore(false);
+        } else {
+          setIsLoading(false);
         }
       }
     },
@@ -303,6 +322,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
+      <LoadingOverlay 
+        isLoading={isLoading && !isRefreshing} 
+        message="タスクを同期しています..."
+      />
+      
       <PullToRefreshIndicator
         isVisible={isPulling}
         isRefreshing={isRefreshing}
