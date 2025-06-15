@@ -23,30 +23,37 @@ const config: Config = {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {
+          // biome-ignore lint/style/useNamingConvention: TailwindCSS requires DEFAULT key
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
         popover: {
+          // biome-ignore lint/style/useNamingConvention: TailwindCSS requires DEFAULT key
           DEFAULT: 'hsl(var(--popover))',
           foreground: 'hsl(var(--popover-foreground))',
         },
         primary: {
+          // biome-ignore lint/style/useNamingConvention: TailwindCSS requires DEFAULT key
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
         },
         secondary: {
+          // biome-ignore lint/style/useNamingConvention: TailwindCSS requires DEFAULT key
           DEFAULT: 'hsl(var(--secondary))',
           foreground: 'hsl(var(--secondary-foreground))',
         },
         muted: {
+          // biome-ignore lint/style/useNamingConvention: TailwindCSS requires DEFAULT key
           DEFAULT: 'hsl(var(--muted))',
           foreground: 'hsl(var(--muted-foreground))',
         },
         accent: {
+          // biome-ignore lint/style/useNamingConvention: TailwindCSS requires DEFAULT key
           DEFAULT: 'hsl(var(--accent))',
           foreground: 'hsl(var(--accent-foreground))',
         },
         destructive: {
+          // biome-ignore lint/style/useNamingConvention: TailwindCSS requires DEFAULT key
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
         },

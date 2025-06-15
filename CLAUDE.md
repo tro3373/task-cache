@@ -13,6 +13,7 @@ This is **TaskCache**, a Progressive Web App (PWA) that synchronizes and manages
 - **Styling**: Tailwind CSS with shadcn/ui component library
 - **Data Layer**: IndexedDB for local persistence, API clients for external services
 - **PWA Features**: Service worker, manifest.json, offline functionality
+- **Code Quality**: Biome for formatting and linting (ESLint for compatibility)
 
 ### Key Data Flow
 1. External APIs (Notion/Google Tasks) → API Clients → IndexedDB → React State
@@ -44,6 +45,8 @@ npm run start     # Serve production build
 ### Code Quality
 ```bash
 npm run lint      # Run ESLint (disabled during builds)
+npm run format    # Format code with Biome
+npm run lint:biome # Lint code with Biome
 ```
 
 ### Utilities
@@ -82,6 +85,31 @@ The project currently has no test suite configured. When adding tests:
 - Mock API clients for unit tests
 - Test PWA functionality requires service worker mocking
 
+## Code Formatting and Linting
+
+### Biome Configuration
+The project uses Biome for code formatting and linting with the following configuration:
+- **Format**: 2 spaces, single quotes, semicolons, 80 character line width
+- **Organize imports**: Automatically sorts and groups imports
+- **Linting rules**: All rules enabled with specific exceptions:
+  - `noConsole`/`noConsoleLog`: Allowed for debugging
+  - `noReactSpecificProps`: Disabled for React development
+  - `noDefaultExport`: Allowed for Next.js pages/components
+  - `useImportExtensions`: Disabled for TypeScript module resolution
+- **Ignored paths**: `public/`, `node_modules/`, `.next/`, `components/ui/` (shadcn/ui)
+
+### Running Code Quality Tools
+```bash
+# Format all files
+npm run format
+
+# Check linting issues
+npm run lint:biome
+
+# Run both ESLint (for compatibility) and Biome
+npm run lint && npm run lint:biome
+```
+
 ## Common Development Tasks
 
 When working with this codebase:
@@ -90,3 +118,4 @@ When working with this codebase:
 - Follow the existing component patterns from shadcn/ui
 - Test offline functionality and IndexedDB operations
 - Ensure mobile-first responsive design principles
+- Run Biome formatting before committing code changes

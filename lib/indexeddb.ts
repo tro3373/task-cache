@@ -28,24 +28,28 @@ export interface AppSettings {
   lastSyncCursor?: string;
 }
 
-class IndexedDBManager {
+class IndexedDbManager {
   private dbName = 'TaskCacheDB';
   private version = 1;
   private db: IDBDatabase | null = null;
 
+  getDb(): IDBDatabase | null {
+    return this.db;
+  }
+
   async init(): Promise<void> {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.version);
-      
+
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
         this.db = request.result;
         resolve();
       };
-      
+
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
-        
+
         // Tasks store
         if (!db.objectStoreNames.contains('tasks')) {
           const taskStore = db.createObjectStore('tasks', { keyPath: 'id' });
@@ -55,7 +59,7 @@ class IndexedDBManager {
           taskStore.createIndex('read', 'read', { unique: false });
           taskStore.createIndex('createdAt', 'createdAt', { unique: false });
         }
-        
+
         // Settings store
         if (!db.objectStoreNames.contains('settings')) {
           db.createObjectStore('settings', { keyPath: 'key' });
@@ -72,65 +76,75 @@ class IndexedDBManager {
   }
 
   async getTasks(): Promise<Task[]> {
-    if (!this.db) throw new Error('Database not initialized');
-    
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['tasks'], 'readonly');
+      const transaction = this.db?.transaction(['tasks'], 'readonly');
       const store = transaction.objectStore('tasks');
       const request = store.getAll();
-      
+
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
   }
 
   async addTask(task: Task): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
-    
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['tasks'], 'readwrite');
+      const transaction = this.db?.transaction(['tasks'], 'readwrite');
       const store = transaction.objectStore('tasks');
       const request = store.add(task);
-      
+
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
   }
 
   async updateTask(task: Task): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
-    
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['tasks'], 'readwrite');
+      const transaction = this.db?.transaction(['tasks'], 'readwrite');
       const store = transaction.objectStore('tasks');
       const request = store.put(task);
-      
+
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
   }
 
   async deleteTask(id: string): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
-    
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['tasks'], 'readwrite');
+      const transaction = this.db?.transaction(['tasks'], 'readwrite');
       const store = transaction.objectStore('tasks');
       const request = store.delete(id);
-      
+
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
   }
 
   async getSettings(): Promise<AppSettings> {
-    if (!this.db) throw new Error('Database not initialized');
-    
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['settings'], 'readonly');
+      const transaction = this.db?.transaction(['settings'], 'readonly');
       const store = transaction.objectStore('settings');
       const request = store.get('app-settings');
-      
+
       request.onsuccess = () => {
         resolve(request.result?.value || { backendType: null });
       };
@@ -139,17 +153,19 @@ class IndexedDBManager {
   }
 
   async saveSettings(settings: AppSettings): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
-    
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['settings'], 'readwrite');
+      const transaction = this.db?.transaction(['settings'], 'readwrite');
       const store = transaction.objectStore('settings');
       const request = store.put({ key: 'app-settings', value: settings });
-      
+
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
   }
 }
 
-export const dbManager = new IndexedDBManager();
+export const dbManager = new IndexedDbManager();

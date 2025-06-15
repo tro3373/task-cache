@@ -1,19 +1,5 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +11,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -32,10 +29,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { AppSettings, dbManager } from '@/lib/indexeddb';
-import { NotionAPIClient, GoogleTasksAPIClient } from '@/lib/api-clients';
-import { Settings, Database, Key, Download } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { usePWAInstall } from '@/hooks/use-pwa-install';
+import { GoogleTasksAPIClient, NotionAPIClient } from '@/lib/api-clients';
+import { type AppSettings, dbManager } from '@/lib/indexeddb';
+import { Database, Download, Settings } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 interface SettingsMenuProps {
@@ -89,14 +88,18 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
     setIsLoading(true);
     try {
       if (settings.backendType === 'notion') {
-        if (!settings.notionApiKey || !settings.notionDatabaseId) {
+        if (!(settings.notionApiKey && settings.notionDatabaseId)) {
           toast.error('Notion APIキーとデータベースIDを入力してください');
           return;
         }
-        
-        const client = new NotionAPIClient(settings.notionApiKey, settings.notionDatabaseId, settings.proxyServerUrl);
+
+        const client = new NotionAPIClient(
+          settings.notionApiKey,
+          settings.notionDatabaseId,
+          settings.proxyServerUrl,
+        );
         const isAuthenticated = await client.authenticate();
-        
+
         if (isAuthenticated) {
           toast.success('Notionへの接続に成功しました');
         } else {
@@ -107,17 +110,20 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
           toast.error('Google Tasks認証情報を入力してください');
           return;
         }
-        
-        const client = new GoogleTasksAPIClient(settings.googleTasksCredentials, settings.proxyServerUrl);
+
+        const client = new GoogleTasksAPIClient(
+          settings.googleTasksCredentials,
+          settings.proxyServerUrl,
+        );
         const isAuthenticated = await client.authenticate();
-        
+
         if (isAuthenticated) {
           toast.success('Google Tasksへの接続に成功しました');
         } else {
           toast.error('Google Tasksへの接続に失敗しました');
         }
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('接続テストでエラーが発生しました');
     } finally {
       setIsLoading(false);
@@ -140,16 +146,16 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
         <div className="space-y-6">
           {/* PWA Install */}
           {canInstall && (
-            <div className="p-4 bg-primary/10 rounded-lg">
+            <div className="rounded-lg bg-primary/10 p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="font-semibold">アプリをインストール</h4>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     ホーム画面に追加してオフラインでも使用できます
                   </p>
                 </div>
                 <Button onClick={install} size="sm">
-                  <Download className="h-4 w-4 mr-2" />
+                  <Download className="mr-2 h-4 w-4" />
                   インストール
                 </Button>
               </div>
@@ -158,19 +164,23 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
 
           {/* Proxy Server Settings */}
           <div className="space-y-3">
-            <Label className="text-base font-semibold">プロキシサーバー設定（オプション）</Label>
+            <Label className="font-semibold text-base">
+              プロキシサーバー設定（オプション）
+            </Label>
             <div className="space-y-2">
               <Label htmlFor="proxy-server-url">プロキシサーバーURL</Label>
               <Input
                 id="proxy-server-url"
                 placeholder="https://proxy.example.com/api?url="
                 value={settings.proxyServerUrl || ''}
-                onChange={(e) => setSettings(prev => ({ 
-                  ...prev, 
-                  proxyServerUrl: e.target.value 
-                }))}
+                onChange={(e) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    proxyServerUrl: e.target.value,
+                  }))
+                }
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 CORS制限を回避するためのプロキシサーバーURLを設定します。末尾に「?url=」を含めてください。
               </p>
             </div>
@@ -178,11 +188,13 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
 
           {/* Backend Selection */}
           <div className="space-y-3">
-            <Label className="text-base font-semibold">バックエンドサービス</Label>
+            <Label className="font-semibold text-base">
+              バックエンドサービス
+            </Label>
             <Select
               value={settings.backendType || ''}
-              onValueChange={(value: 'notion' | 'google-tasks') => 
-                setSettings(prev => ({ ...prev, backendType: value }))
+              onValueChange={(value: 'notion' | 'google-tasks') =>
+                setSettings((prev) => ({ ...prev, backendType: value }))
               }
             >
               <SelectTrigger>
@@ -205,10 +217,12 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
                   type="password"
                   placeholder="secret_..."
                   value={settings.notionApiKey || ''}
-                  onChange={(e) => setSettings(prev => ({ 
-                    ...prev, 
-                    notionApiKey: e.target.value 
-                  }))}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      notionApiKey: e.target.value,
+                    }))
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -217,10 +231,12 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
                   id="notion-database-id"
                   placeholder="32桁のデータベースID"
                   value={settings.notionDatabaseId || ''}
-                  onChange={(e) => setSettings(prev => ({ 
-                    ...prev, 
-                    notionDatabaseId: e.target.value 
-                  }))}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      notionDatabaseId: e.target.value,
+                    }))
+                  }
                 />
               </div>
             </div>
@@ -235,10 +251,12 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
                   id="google-credentials"
                   placeholder="Google Tasks APIの認証情報をJSON形式で入力"
                   value={settings.googleTasksCredentials || ''}
-                  onChange={(e) => setSettings(prev => ({ 
-                    ...prev, 
-                    googleTasksCredentials: e.target.value 
-                  }))}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      googleTasksCredentials: e.target.value,
+                    }))
+                  }
                   rows={4}
                 />
               </div>
@@ -253,19 +271,16 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
               variant="outline"
               className="w-full"
             >
-              <Database className="h-4 w-4 mr-2" />
+              <Database className="mr-2 h-4 w-4" />
               {isLoading ? '接続テスト中...' : '接続テスト'}
             </Button>
           )}
 
           {/* Clear Local Data */}
           <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="destructive"
-                className="w-full"
-              >
-                <Database className="h-4 w-4 mr-2" />
+            <AlertDialogTrigger asChild={true}>
+              <Button variant="destructive" className="w-full">
+                <Database className="mr-2 h-4 w-4" />
                 データをクリア
               </Button>
             </AlertDialogTrigger>
@@ -274,7 +289,7 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
                 <AlertDialogTitle>データをクリアしますか？</AlertDialogTitle>
                 <AlertDialogDescription>
                   この操作により、以下のデータが削除されます：
-                  <ul className="list-disc list-inside mt-2 space-y-1">
+                  <ul className="mt-2 list-inside list-disc space-y-1">
                     <li>すべてのタスクデータ</li>
                     <li>既読・ストック状態</li>
                     <li>最終同期情報</li>
@@ -290,13 +305,19 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
                   onClick={async () => {
                     try {
                       await dbManager.init();
-                      
+
                       // Clear tasks data
-                      const db = (dbManager as any).db;
-                      const transaction = db.transaction(['tasks'], 'readwrite');
+                      const db = dbManager.getDb();
+                      if (!db) {
+                        throw new Error('Database not initialized');
+                      }
+                      const transaction = db.transaction(
+                        ['tasks'],
+                        'readwrite',
+                      );
                       const store = transaction.objectStore('tasks');
                       await store.clear();
-                      
+
                       // Reset lastSync settings while keeping other settings
                       const currentSettings = await dbManager.getSettings();
                       const newSettings = {
@@ -305,10 +326,10 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
                         lastSyncCursor: undefined,
                       };
                       await dbManager.saveSettings(newSettings);
-                      
+
                       toast.success('データをクリアしました');
                       window.location.reload(); // Reload to reflect changes
-                    } catch (error) {
+                    } catch (_error) {
                       toast.error('データクリアに失敗しました');
                     }
                   }}

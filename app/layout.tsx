@@ -1,8 +1,8 @@
 import './globals.css';
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import { Toaster } from '@/components/ui/sonner';
+import type { Metadata } from 'next';
 import { ThemeProvider } from 'next-themes';
+import { Inter } from 'next/font/google';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -11,7 +11,8 @@ export const metadata: Metadata = {
   description: 'Sync and manage tasks from Notion and Google Tasks',
   manifest: '/manifest.json',
   themeColor: '#3b82f6',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no',
+  viewport:
+    'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -25,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ja" suppressHydrationWarning>
+    <html lang="ja" suppressHydrationWarning={true}>
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <meta name="mobile-web-app-capable" content="yes" />
@@ -33,14 +34,14 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
       <body className={inter.className}>
-        <ThemeProvider 
-          attribute="class" 
-          defaultTheme="dark" 
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
           enableSystem={false}
-          disableTransitionOnChange
+          disableTransitionOnChange={true}
         >
           {children}
-          <Toaster richColors position="top-center" />
+          <Toaster richColors={true} position="top-center" />
         </ThemeProvider>
       </body>
     </html>

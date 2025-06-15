@@ -52,7 +52,14 @@
         "useImportExtensions": "off" // tsxモジュールインポート時に拡張子を強制 => OFF
       },
       "style": {
-        "noDefaultExport": "off" // デフォルトエクスポート禁止 => OFF
+        "noDefaultExport": "off", // デフォルトエクスポート禁止 => OFF
+        "useNamingConvention": {
+          "level": "warn",
+          "options": {
+            "enumMemberCase": "CONSTANT_CASE",
+            "strictCase": false
+          }
+        }
       },
       "nursery": {
         "useSortedClasses": "warn"
