@@ -1,5 +1,6 @@
 'use client';
 
+import { ErrorDialog } from '@/components/error-dialog';
 import { Header } from '@/components/header';
 import { LoadingOverlay } from '@/components/loading-overlay';
 import { PullToRefreshIndicator } from '@/components/pull-to-refresh-indicator';
@@ -24,6 +25,16 @@ export default function Home() {
     'unread',
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [errorDialog, setErrorDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    details?: string;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
 
   // Helper function to remove duplicate tasks by ID
   const removeDuplicateTasks = (tasks: Task[]): Task[] => {
@@ -189,11 +200,40 @@ export default function Home() {
         }
       } catch (error) {
         console.error('Sync failed:', error);
-        if (error instanceof Error && error.message === 'Request timeout') {
-          toast.error('データの同期がタイムアウトしました。ネットワーク接続を確認してください。');
-        } else {
-          toast.error('データの同期に失敗しました');
+        
+        let errorMessage = 'データの同期に失敗しました';
+        let errorDetails = '';
+        
+        if (error instanceof Error) {
+          if (error.message === 'Request timeout') {
+            errorMessage = 'データの同期がタイムアウトしました';
+            errorDetails = 'ネットワーク接続を確認してください。プロキシサーバーを使用している場合は、設定を確認してください。';
+          } else {
+            errorDetails = error.message;
+            
+            // Check for specific error patterns
+            if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+              errorMessage = '認証エラーが発生しました';
+              errorDetails = 'APIキーまたは認証情報が正しくない可能性があります。設定を確認してください。';
+            } else if (error.message.includes('404')) {
+              errorMessage = 'リソースが見つかりません';
+              errorDetails = 'データベースIDまたはタスクリストが正しくない可能性があります。';
+            } else if (error.message.includes('CORS') || error.message.includes('fetch')) {
+              errorMessage = 'ネットワークエラーが発生しました';
+              errorDetails = `${error.message}\n\nCORSエラーの場合は、プロキシサーバーの設定が必要です。`;
+            }
+          }
         }
+        
+        // Show error dialog with details
+        setErrorDialog({
+          isOpen: true,
+          title: errorMessage,
+          message: 'エラーの詳細情報:',
+          details: errorDetails || '不明なエラーが発生しました',
+        });
+        
+        toast.error(errorMessage);
       } finally {
         if (loadMore) {
           setIsLoadingMore(false);
@@ -446,7 +486,20 @@ export default function Home() {
         )}
       </main>
 
-      <SettingsMenu open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <SettingsMenu 
+        open={settingsOpen} 
+        onOpenChange={setSettingsOpen}
+        settings={settings}
+        onSettingsChange={handleSettingsChange}
+      />
+      
+      <ErrorDialog
+        isOpen={errorDialog.isOpen}
+        onClose={() => setErrorDialog({ ...errorDialog, isOpen: false })}
+        title={errorDialog.title}
+        message={errorDialog.message}
+        details={errorDialog.details}
+      />
     </div>
   );
 }
