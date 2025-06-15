@@ -1,0 +1,80 @@
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "vcs": {
+    "enabled": false,
+    "clientKind": "git",
+    "useIgnoreFile": false
+  },
+  "files": {
+    "ignoreUnknown": false,
+    "ignore": [
+      "public",
+      "**/node_modules/**",
+      "**/.next/**",
+      "**/dist/**",
+      "**/out/**",
+      "**/build/**",
+      "**/coverage/**",
+      "**/package-lock.json",
+      "**/yarn.lock",
+      "**/pnpm-lock.yaml",
+      "**/obj/**",
+      "**/components/ui/**" // Ignore shadcn/ui components
+      // "**/lib/**"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": false, // エラー時にもフォーマットを実行するか
+    "ignore": [],
+    "attributePosition": "auto",
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineEnding": "lf",
+    "lineWidth": 80
+  },
+  "organizeImports": {
+    "enabled": true
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "all": true,
+      "suspicious": {
+        "noConsole": "off",
+        "noConsoleLog": "off",
+        "noReactSpecificProps": "off"
+      },
+      "correctness": {
+        "noUndeclaredVariables": "error",
+        "noUnusedVariables": "warn", // 未使用の変数を警告 => WARN
+        "noConstantCondition": "off", // 常に真偽値を返す条件式を警告 => OFF
+        "useImportExtensions": "off" // tsxモジュールインポート時に拡張子を強制 => OFF
+      },
+      "style": {
+        "noDefaultExport": "off" // デフォルトエクスポート禁止 => OFF
+      },
+      "nursery": {
+        "useSortedClasses": "warn"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "always"
+    },
+    "globals": [
+      "React",
+      "JSX",
+      "GmailApp",
+      "SpreadsheetApp",
+      "PropertiesService",
+      "Session",
+      "Utilities",
+      "Logger",
+      "UrlFetchApp",
+      "chrome"
+    ]
+  }
+}
