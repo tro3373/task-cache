@@ -37,7 +37,7 @@ export default function Home() {
   });
 
   // Helper function to remove duplicate tasks by ID
-  const removeDuplicateTasks = (tasks: Task[]): Task[] => {
+  const removeDuplicateTasks = useCallback((tasks: Task[]): Task[] => {
     const seen = new Set<string>();
     return tasks.filter((task) => {
       if (seen.has(task.id)) {
@@ -46,11 +46,6 @@ export default function Home() {
       seen.add(task.id);
       return true;
     });
-  };
-
-  // Initialize app
-  useEffect(() => {
-    initializeApp();
   }, []);
 
   const initializeApp = async () => {
@@ -75,6 +70,11 @@ export default function Home() {
       setIsLoading(false);
     }
   };
+
+  // Initialize app
+  useEffect(() => {
+    initializeApp();
+  }, []);
 
   // Sync data with backend (incremental)
   const syncData = useCallback(

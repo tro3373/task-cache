@@ -78,19 +78,15 @@ export function TaskCard({
       )}
     >
       {(task.imageUrl || task.ogpImageUrl) && !imageError && (
-        <div
+        <button
+          type="button"
           className={cn(
             'relative aspect-video w-full overflow-hidden',
             (task.url || task.notionPageUrl) && 'cursor-pointer',
+            'border-0 bg-transparent p-0 text-left',
           )}
           onClick={handleTitleClick}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              handleTitleClick();
-            }
-          }}
-          role="button"
-          tabIndex={task.url || task.notionPageUrl ? 0 : -1}
+          disabled={!(task.url || task.notionPageUrl)}
         >
           <img
             src={task.ogpImageUrl || task.imageUrl}
@@ -104,7 +100,7 @@ export function TaskCard({
               <ExternalLink className="h-8 w-8 text-white opacity-0 drop-shadow-lg transition-opacity duration-200 hover:opacity-80" />
             </div>
           )}
-        </div>
+        </button>
       )}
 
       <div className="space-y-3 p-4">
