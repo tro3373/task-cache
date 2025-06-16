@@ -1,0 +1,9 @@
+{
+  "sorts": [
+    {
+      "property": "作成日時",
+      "direction": "descending"
+    }
+  ],
+  "page_size": 1
+}

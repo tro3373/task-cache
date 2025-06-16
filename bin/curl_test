@@ -1,0 +1,157 @@
+#!/usr/bin/env -S bash -e
+
+script_dir=$(cd "$(dirname "${BASH_SOURCE:-$0}")" && pwd) && readonly script_dir
+command_name=$(basename "$0") && readonly command_name
+list_file=$script_dir/$command_name.list
+env_file=$script_dir/$command_name.env
+timestamp=$(date +%Y%m%d_%H%M%S) && readonly timestamp
+readonly depends=(curl fzf jq)
+
+has() { command -v "${1}" >&/dev/null; }
+hass() { for arg in "$@"; do has "$arg" || error "==> No $arg command exist."; done; }
+_ink() { cat - | if has ink; then ink "$@"; else cat -; fi; }
+# shellcheck disable=SC2145
+_log() { echo "$(date +"%Y-%m-%d %H:%M:%S") ${@:2}" | _ink "$1"; }
+log() { _log white "$*"; }
+info() { _log cyan "$*"; }
+warn() { _log yellow "$*"; }
+error() { _log red "$*" && exit 1; }
+
+get_dst_path() {
+  local svc_dir
+  svc_dir=$(get_svc_dir res)
+  echo "$svc_dir/${timestamp}_${name}.json"
+}
+get_req_opt_path() {
+  local svc_dir
+  svc_dir=$(get_svc_dir req)
+  echo "$svc_dir/$name.opt"
+  echo "$svc_dir/opt"
+}
+get_req_json_path() {
+  local svc_dir
+  svc_dir=$(get_svc_dir req)
+  echo "$svc_dir/$name.json"
+}
+get_svc_dir() {
+  local req_res=req
+  if [[ $1 == res ]]; then
+    req_res=res
+  fi
+  echo "$script_dir/lib/$command_name/$req_res/$svc"
+}
+
+execute_curl() {
+  dst=$(get_dst_path)
+  mkdir -p "$(dirname "$dst")"
+  local commands=()
+  commands+=(curl)
+  commands+=(-sSL)
+  commands+=("$url")
+  commands+=(-X "$method")
+  commands+=(-H "Content-Type: application/json")
+  while read -r line; do
+    [[ -z $line ]] && continue
+    [[ $line =~ ^#.* ]] && continue
+    eval "commands+=($line)"
+  done < <(cat_req_opts | envsubst)
+  commands+=(-d @-)
+  dump_request
+  cat_req_data |
+    tee >(info "==> Data: $(cat)") |
+    jq -c |
+    "${commands[@]}" |
+    tee >(jq . >"$dst") |
+    jq .
+  [[ -z $save_env_vals || $save_env_vals == _ ]] && return
+  echo -e "$save_env_vals" |
+    tr ',' '\n' |
+    tr ':' ' ' |
+    while read -r save_env_val save_env_val_jq_path; do
+      [[ -z $save_env_val ]] && continue
+      [[ $save_env_val =~ ^#.* ]] && continue
+      eval "$save_env_val=$(cat <"$dst" | jq -r "$save_env_val_jq_path")"
+      update_dot_env "$save_env_val"
+    done
+}
+
+cat_req_opts() {
+  get_req_opt_path |
+    while read -r _opt_path; do
+      [[ -z $_opt_path ]] && continue
+      [[ $_opt_path =~ ^#.* ]] && continue
+      [[ ! -e $_opt_path ]] && continue
+      echo "$_opt_path"
+    done |
+    head -1 |
+    xargs cat
+}
+
+dump_request() {
+  info "==> Requesting..${commands[*]}"
+  for arg in "${commands[@]}"; do
+    [[ $arg =~ ^curl ]] && printf "%s" "$arg" && continue
+    [[ $arg =~ ^(-d|@) ]] && echo "" && break # last arg
+    [[ $arg =~ ^- ]] && printf ' \\ \n  %s ' "$arg" && continue
+    printf '"%s"' "$arg"
+  done
+}
+
+update_dot_env() {
+  local k=$1
+  local v=${!k} # expand the variable
+  if [[ $v == null ]]; then
+    return
+  fi
+  {
+    cat <"$env_file" | grep -v "^$k="
+    echo "$k=$v"
+  } >"$env_file.tmp"
+  mv "$env_file.tmp" "$env_file"
+  info "==> Env updated: $k=$v"
+}
+
+cat_req_data() {
+  local _json
+  _json="$(get_req_json_path)"
+  if [[ ! -e $_json ]]; then
+    echo ""
+    return
+  fi
+  envsubst <"$_json"
+}
+
+main() {
+  # shellcheck disable=SC1090
+  [[ -e $env_file ]] && {
+    set -a
+    source "$env_file"
+    set +a
+  }
+  hass "${depends[@]}" # check dependency commands
+  [[ -e $list_file ]] || {
+    error "==> No list file exist. $list_file"
+  }
+  fzf_opt=
+  [[ $# -gt 0 ]] && {
+    # shellcheck disable=SC2089
+    fzf_opt="--query ${*}"
+  }
+  # shellcheck disable=SC2090,SC2086
+  cat <"$list_file" |
+    grep -v '^#' |
+    envsubst |
+    fzf --tac --select-1 --exit-0 $fzf_opt |
+    while read -r svc name method url save_env_vals; do
+      auth_header=${auth_header/:/: }
+      warn "==> svc:$svc"
+      warn "==> name:$name"
+      warn "==> method:$method"
+      warn "==> url:$url"
+      warn "==> save_env_vals:$save_env_vals"
+      [[ -z $name ]] && continue
+      [[ $name =~ ^#.* ]] && continue
+      execute_curl
+    done
+}
+main "$@"

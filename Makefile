@@ -1,4 +1,7 @@
 SHELL := bash
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+mkfile_dir := $(patsubst %/,%,$(dir $(mkfile_path)))
+PATH := $(mkfile_dir)/bin:$(PATH)
 .SHELLFLAGS := -eu -o pipefail -c # -c: Needed in .SHELLFLAGS. Default is -c.
 .DEFAULT_GOAL := run
 
@@ -16,8 +19,6 @@ npmi_if_needed:
 		make npmi; \
 	fi
 
-clean:
-	@rm -rf node_modules
 build-dev:
 	@make _build opt=-dev
 build-stg:
@@ -103,3 +104,10 @@ redeploy: ## Redeploy to existing Vercel project
 open_browser:
 	@local_url="http://$(shell ipa 2>/dev/null || echo localhost):3000" && \
 		open "$${local_url}" 2>/dev/null || echo "==> Open $${local_url} in your browser."
+
+
+curl-test:
+	@curl_test $(filter-out $@,$(MAKECMDGOALS))
+# For curl-test
+%:
+	@:
