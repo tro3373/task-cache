@@ -80,8 +80,9 @@ class IndexedDbManager {
       throw new Error('Database not initialized');
     }
 
+    const db = this.db;
     return new Promise((resolve, reject) => {
-      const transaction = this.db?.transaction(['tasks'], 'readonly');
+      const transaction = db.transaction(['tasks'], 'readonly');
       const store = transaction.objectStore('tasks');
       const request = store.getAll();
 
@@ -95,8 +96,9 @@ class IndexedDbManager {
       throw new Error('Database not initialized');
     }
 
+    const db = this.db;
     return new Promise((resolve, reject) => {
-      const transaction = this.db?.transaction(['tasks'], 'readwrite');
+      const transaction = db.transaction(['tasks'], 'readwrite');
       const store = transaction.objectStore('tasks');
       const request = store.add(task);
 
@@ -110,8 +112,9 @@ class IndexedDbManager {
       throw new Error('Database not initialized');
     }
 
+    const db = this.db;
     return new Promise((resolve, reject) => {
-      const transaction = this.db?.transaction(['tasks'], 'readwrite');
+      const transaction = db.transaction(['tasks'], 'readwrite');
       const store = transaction.objectStore('tasks');
       const request = store.put(task);
 
@@ -125,8 +128,9 @@ class IndexedDbManager {
       throw new Error('Database not initialized');
     }
 
+    const db = this.db;
     return new Promise((resolve, reject) => {
-      const transaction = this.db?.transaction(['tasks'], 'readwrite');
+      const transaction = db.transaction(['tasks'], 'readwrite');
       const store = transaction.objectStore('tasks');
       const request = store.delete(id);
 
@@ -140,8 +144,9 @@ class IndexedDbManager {
       throw new Error('Database not initialized');
     }
 
+    const db = this.db;
     return new Promise((resolve, reject) => {
-      const transaction = this.db?.transaction(['settings'], 'readonly');
+      const transaction = db.transaction(['settings'], 'readonly');
       const store = transaction.objectStore('settings');
       const request = store.get('app-settings');
 
@@ -157,8 +162,9 @@ class IndexedDbManager {
       throw new Error('Database not initialized');
     }
 
+    const db = this.db;
     return new Promise((resolve, reject) => {
-      const transaction = this.db?.transaction(['settings'], 'readwrite');
+      const transaction = db.transaction(['settings'], 'readwrite');
       const store = transaction.objectStore('settings');
       const request = store.put({ key: 'app-settings', value: settings });
 
