@@ -76,6 +76,185 @@ export default function Home() {
     initializeApp();
   }, []);
 
+  // biome-ignore lint/suspicious/noExplicitAny: ignore
+  const getSyncErrorMessage = useCallback((error: any) => {
+    const res = {
+      errorMessage: 'データの同期に失敗しました',
+      errorDetails: '',
+    };
+    if (!(error instanceof Error)) {
+      return res;
+    }
+
+    res.errorDetails = error.message;
+    if (error.message === 'Request timeout') {
+      return {
+        errorMessage: 'データの同期がタイムアウトしました',
+        errorDetails:
+          'ネットワーク接続を確認してください。プロキシサーバーを使用している場合は、設定を確認してください。',
+      };
+    }
+
+    // Check for specific error patterns
+    if (
+      error.message.includes('401') ||
+      error.message.includes('Unauthorized')
+    ) {
+      return {
+        errorMessage: '認証エラーが発生しました',
+        errorDetails:
+          'APIキーまたは認証情報が正しくない可能性があります。設定を確認してください。',
+      };
+    }
+    if (error.message.includes('404')) {
+      return {
+        errorMessage: 'リソースが見つかりません',
+        errorDetails:
+          'データベースIDまたはタスクリストが正しくない可能性があります。',
+      };
+    }
+    if (error.message.includes('CORS') || error.message.includes('fetch')) {
+      return {
+        errorMessage: 'ネットワークエラーが発生しました',
+        errorDetails: `${error.message}\n\nCORSエラーの場合は、プロキシサーバーの設定が必要です。`,
+      };
+    }
+    return res;
+  }, []);
+
+  const handleSyncError = useCallback(
+    // biome-ignore lint/suspicious/noExplicitAny: ignore
+    (error: any) => {
+      console.error('Sync failed:', error);
+      const { errorMessage, errorDetails } = getSyncErrorMessage(error);
+      // Show error dialog with details
+      setErrorDialog({
+        isOpen: true,
+        title: errorMessage,
+        message: 'エラーの詳細情報:',
+        details: errorDetails || '不明なエラーが発生しました',
+      });
+      toast.error(errorMessage);
+    },
+    [getSyncErrorMessage],
+  );
+
+  const getApiClient = useCallback(():
+    | NotionAPIClient
+    | GoogleTasksAPIClient
+    | undefined => {
+    if (settings.backendType === 'notion') {
+      if (!(settings.notionApiKey && settings.notionDatabaseId)) {
+        toast.error('Notionの設定が不完全です');
+        return;
+      }
+      return new NotionAPIClient(
+        settings.notionApiKey,
+        settings.notionDatabaseId,
+        settings.proxyServerUrl,
+      );
+    }
+    if (!settings.googleTasksCredentials) {
+      toast.error('Google Tasksの設定が不完全です');
+      return;
+    }
+    return new GoogleTasksAPIClient(
+      settings.googleTasksCredentials,
+      settings.proxyServerUrl,
+    );
+  }, [settings]);
+
+  const syncInner = useCallback(
+    async (loadMore: boolean) => {
+      const apiClient = getApiClient();
+      if (!apiClient) {
+        return;
+      }
+
+      // Create timeout promise
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Request timeout'));
+        }, 30000); // 30 seconds timeout
+      });
+
+      // For incremental sync, use lastSyncAt for filtering
+      // For pagination, use lastSyncCursor
+      const fetchPromise = apiClient.fetchTasks(
+        loadMore ? undefined : settings.lastSyncAt,
+        loadMore ? settings.lastSyncCursor : undefined,
+        20,
+      );
+
+      // Race between fetch and timeout
+      const result = await Promise.race([fetchPromise, timeoutPromise]);
+      if (result.tasks.length === 0) {
+        if (!loadMore) {
+          toast.info('新しいタスクはありませんでした');
+        }
+        setHasMoreTasks(false);
+        return;
+      }
+
+      // Get existing tasks from IndexedDB to preserve local state
+      const allExistingTasks = await dbManager.getTasks();
+      const existingTasksMap = new Map(
+        allExistingTasks.map((task) => [task.sourceId, task]),
+      );
+
+      const mergedTasks = result.tasks.map((fetchedTask) => {
+        const existing = existingTasksMap.get(fetchedTask.sourceId);
+        return existing
+          ? {
+              ...fetchedTask,
+              read: existing.read,
+              stocked: existing.stocked,
+            }
+          : fetchedTask;
+      });
+
+      // Save to IndexedDB
+      for (const task of mergedTasks) {
+        try {
+          await dbManager.updateTask(task);
+        } catch {
+          await dbManager.addTask(task);
+        }
+      }
+
+      if (loadMore) {
+        // Append to existing tasks, avoiding duplicates
+        setTasks((prev) => {
+          const existingIds = new Set(prev.map((task) => task.id));
+          const newTasks = mergedTasks.filter(
+            (task) => !existingIds.has(task.id),
+          );
+          return [...prev, ...newTasks];
+        });
+      } else {
+        // Replace with new tasks + reload from DB to get complete list
+        const allTasks = await dbManager.getTasks();
+        setTasks(removeDuplicateTasks(allTasks));
+      }
+
+      setHasMoreTasks(result.hasMore);
+
+      if (!loadMore) {
+        toast.success(`${result.tasks.length}件のタスクを同期しました`);
+      }
+
+      // Update sync settings
+      const newSettings = {
+        ...settings,
+        lastSyncAt: new Date(),
+        lastSyncCursor: result.nextCursor,
+      };
+      await dbManager.saveSettings(newSettings);
+      setSettings(newSettings);
+    },
+    [removeDuplicateTasks, settings, getApiClient],
+  );
+
   // Sync data with backend (incremental)
   const syncData = useCallback(
     async (loadMore = false) => {
@@ -83,166 +262,15 @@ export default function Home() {
         toast.error('バックエンドサービスが設定されていません');
         return;
       }
-
       if (loadMore) {
         setIsLoadingMore(true);
       } else {
         setIsLoading(true);
       }
-
       try {
-        let apiClient: NotionAPIClient | GoogleTasksAPIClient | undefined;
-
-        if (settings.backendType === 'notion') {
-          if (!(settings.notionApiKey && settings.notionDatabaseId)) {
-            toast.error('Notionの設定が不完全です');
-            return;
-          }
-          apiClient = new NotionAPIClient(
-            settings.notionApiKey,
-            settings.notionDatabaseId,
-            settings.proxyServerUrl,
-          );
-        } else if (settings.backendType === 'google-tasks') {
-          if (!settings.googleTasksCredentials) {
-            toast.error('Google Tasksの設定が不完全です');
-            return;
-          }
-          apiClient = new GoogleTasksAPIClient(
-            settings.googleTasksCredentials,
-            settings.proxyServerUrl,
-          );
-        }
-
-        if (!apiClient) {
-          return;
-        }
-
-        // Create timeout promise
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => {
-            reject(new Error('Request timeout'));
-          }, 30000); // 30 seconds timeout
-        });
-
-        // For incremental sync, use lastSyncAt for filtering
-        // For pagination, use lastSyncCursor
-        const fetchPromise = apiClient.fetchTasks(
-          loadMore ? undefined : settings.lastSyncAt,
-          loadMore ? settings.lastSyncCursor : undefined,
-          20,
-        );
-
-        // Race between fetch and timeout
-        const result = await Promise.race([fetchPromise, timeoutPromise]);
-
-        if (result.tasks.length > 0) {
-          // Get existing tasks from IndexedDB to preserve local state
-          const allExistingTasks = await dbManager.getTasks();
-          const existingTasksMap = new Map(
-            allExistingTasks.map((task) => [task.sourceId, task]),
-          );
-
-          const mergedTasks = result.tasks.map((fetchedTask) => {
-            const existing = existingTasksMap.get(fetchedTask.sourceId);
-            return existing
-              ? {
-                  ...fetchedTask,
-                  read: existing.read,
-                  stocked: existing.stocked,
-                }
-              : fetchedTask;
-          });
-
-          // Save to IndexedDB
-          for (const task of mergedTasks) {
-            try {
-              await dbManager.updateTask(task);
-            } catch {
-              await dbManager.addTask(task);
-            }
-          }
-
-          if (loadMore) {
-            // Append to existing tasks, avoiding duplicates
-            setTasks((prev) => {
-              const existingIds = new Set(prev.map((task) => task.id));
-              const newTasks = mergedTasks.filter(
-                (task) => !existingIds.has(task.id),
-              );
-              return [...prev, ...newTasks];
-            });
-          } else {
-            // Replace with new tasks + reload from DB to get complete list
-            const allTasks = await dbManager.getTasks();
-            setTasks(removeDuplicateTasks(allTasks));
-          }
-
-          setHasMoreTasks(result.hasMore);
-
-          if (!loadMore) {
-            toast.success(`${result.tasks.length}件のタスクを同期しました`);
-          }
-
-          // Update sync settings
-          const newSettings = {
-            ...settings,
-            lastSyncAt: new Date(),
-            lastSyncCursor: result.nextCursor,
-          };
-          await dbManager.saveSettings(newSettings);
-          setSettings(newSettings);
-        } else {
-          if (!loadMore) {
-            toast.info('新しいタスクはありませんでした');
-          }
-          setHasMoreTasks(false);
-        }
+        await syncInner(loadMore);
       } catch (error) {
-        console.error('Sync failed:', error);
-
-        let errorMessage = 'データの同期に失敗しました';
-        let errorDetails = '';
-
-        if (error instanceof Error) {
-          if (error.message === 'Request timeout') {
-            errorMessage = 'データの同期がタイムアウトしました';
-            errorDetails =
-              'ネットワーク接続を確認してください。プロキシサーバーを使用している場合は、設定を確認してください。';
-          } else {
-            errorDetails = error.message;
-
-            // Check for specific error patterns
-            if (
-              error.message.includes('401') ||
-              error.message.includes('Unauthorized')
-            ) {
-              errorMessage = '認証エラーが発生しました';
-              errorDetails =
-                'APIキーまたは認証情報が正しくない可能性があります。設定を確認してください。';
-            } else if (error.message.includes('404')) {
-              errorMessage = 'リソースが見つかりません';
-              errorDetails =
-                'データベースIDまたはタスクリストが正しくない可能性があります。';
-            } else if (
-              error.message.includes('CORS') ||
-              error.message.includes('fetch')
-            ) {
-              errorMessage = 'ネットワークエラーが発生しました';
-              errorDetails = `${error.message}\n\nCORSエラーの場合は、プロキシサーバーの設定が必要です。`;
-            }
-          }
-        }
-
-        // Show error dialog with details
-        setErrorDialog({
-          isOpen: true,
-          title: errorMessage,
-          message: 'エラーの詳細情報:',
-          details: errorDetails || '不明なエラーが発生しました',
-        });
-
-        toast.error(errorMessage);
+        handleSyncError(error);
       } finally {
         if (loadMore) {
           setIsLoadingMore(false);
@@ -251,7 +279,7 @@ export default function Home() {
         }
       }
     },
-    [settings, removeDuplicateTasks],
+    [settings, syncInner, handleSyncError],
   );
 
   const { isRefreshing, isPulling, pullDistance } = usePullToRefresh(syncData);
