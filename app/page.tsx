@@ -340,7 +340,6 @@ export default function Home() {
     }
   };
 
-
   // Infinite scroll handler
   const handleScroll = useCallback(() => {
     if (
@@ -496,10 +495,7 @@ export default function Home() {
         )}
       </main>
 
-      <SettingsMenu
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-      />
+      <SettingsMenu open={settingsOpen} onOpenChange={setSettingsOpen} />
 
       <ErrorDialog
         isOpen={errorDialog.isOpen}

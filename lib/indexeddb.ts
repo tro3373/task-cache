@@ -81,7 +81,7 @@ class IndexedDbManager {
     }
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['tasks'], 'readonly');
+      const transaction = this.db?.transaction(['tasks'], 'readonly');
       const store = transaction.objectStore('tasks');
       const request = store.getAll();
 
@@ -96,7 +96,7 @@ class IndexedDbManager {
     }
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['tasks'], 'readwrite');
+      const transaction = this.db?.transaction(['tasks'], 'readwrite');
       const store = transaction.objectStore('tasks');
       const request = store.add(task);
 
@@ -111,7 +111,7 @@ class IndexedDbManager {
     }
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['tasks'], 'readwrite');
+      const transaction = this.db?.transaction(['tasks'], 'readwrite');
       const store = transaction.objectStore('tasks');
       const request = store.put(task);
 
@@ -126,7 +126,7 @@ class IndexedDbManager {
     }
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['tasks'], 'readwrite');
+      const transaction = this.db?.transaction(['tasks'], 'readwrite');
       const store = transaction.objectStore('tasks');
       const request = store.delete(id);
 
@@ -141,7 +141,7 @@ class IndexedDbManager {
     }
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['settings'], 'readonly');
+      const transaction = this.db?.transaction(['settings'], 'readonly');
       const store = transaction.objectStore('settings');
       const request = store.get('app-settings');
 
@@ -158,7 +158,7 @@ class IndexedDbManager {
     }
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['settings'], 'readwrite');
+      const transaction = this.db?.transaction(['settings'], 'readwrite');
       const store = transaction.objectStore('settings');
       const request = store.put({ key: 'app-settings', value: settings });
 
