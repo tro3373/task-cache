@@ -19,14 +19,8 @@ npmi_if_needed:
 		make npmi; \
 	fi
 
-build-dev:
-	@make _build opt=-dev
-build-stg:
-	@make _build opt=-stg
-build-prd:
-	@make _build opt=-prd
 build: npmi_if_needed
-	@npm run build$(opt)
+	@npm run build
 
 run: npmi_if_needed open_browser
 	@npm run dev

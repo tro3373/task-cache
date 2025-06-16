@@ -33,19 +33,19 @@ type ActionType = typeof actionTypes;
 
 type Action =
   | {
-      type: ActionType['ADD_TOAST'];
+      type: typeof actionTypes.addToast;
       toast: ToasterToast;
     }
   | {
-      type: ActionType['UPDATE_TOAST'];
+      type: typeof actionTypes.updateToast;
       toast: Partial<ToasterToast>;
     }
   | {
-      type: ActionType['DISMISS_TOAST'];
+      type: typeof actionTypes.dismissToast;
       toastId?: ToasterToast['id'];
     }
   | {
-      type: ActionType['REMOVE_TOAST'];
+      type: typeof actionTypes.removeToast;
       toastId?: ToasterToast['id'];
     };
 

@@ -340,21 +340,6 @@ export default function Home() {
     }
   };
 
-  const handleSettingsChange = async (newSettings: AppSettings) => {
-    await dbManager.saveSettings(newSettings);
-    setSettings(newSettings);
-
-    // If backend type changed or settings were updated, trigger sync
-    if (
-      newSettings.backendType &&
-      (newSettings.backendType !== settings.backendType ||
-        newSettings.notionApiKey !== settings.notionApiKey ||
-        newSettings.notionDatabaseId !== settings.notionDatabaseId ||
-        newSettings.googleTasksCredentials !== settings.googleTasksCredentials)
-    ) {
-      await syncData();
-    }
-  };
 
   // Infinite scroll handler
   const handleScroll = useCallback(() => {
@@ -514,8 +499,6 @@ export default function Home() {
       <SettingsMenu
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
-        settings={settings}
-        onSettingsChange={handleSettingsChange}
       />
 
       <ErrorDialog
