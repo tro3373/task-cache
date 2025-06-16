@@ -33,9 +33,11 @@ export class NotionAPIClient implements APIClient {
     return this.proxyUrl ? `${this.proxyUrl}${encodeURIComponent(url)}` : url;
   }
 
-  private async fetchOGPImage(url: string): Promise<string | undefined> {
+  private async fetchOGPData(
+    url: string,
+  ): Promise<{ title?: string; description?: string; image?: string }> {
     if (!(this.proxyUrl && url)) {
-      return undefined;
+      return {};
     }
 
     try {
@@ -50,21 +52,25 @@ export class NotionAPIClient implements APIClient {
 
       console.log('Original proxy URL:', this.proxyUrl);
       console.log('Extracted base URL:', baseUrl);
-      console.log('Fetching OGP image from:', ogpUrl);
+      console.log('Fetching OGP data from:', ogpUrl);
 
       const response = await fetch(ogpUrl);
       if (!response.ok) {
         console.log('OGP fetch failed:', response.status, response.statusText);
-        return undefined;
+        return {};
       }
 
       const data = await response.json();
       console.log('OGP response:', data);
 
-      return data.image;
+      return {
+        title: data.title,
+        description: data.description,
+        image: data.image,
+      };
     } catch (error) {
-      console.error('Failed to fetch OGP image:', error);
-      return undefined;
+      console.error('Failed to fetch OGP data:', error);
+      return {};
     }
   }
 
@@ -247,12 +253,22 @@ export class NotionAPIClient implements APIClient {
 
   // biome-ignore lint/suspicious/noExplicitAny: Notion API response
   private async mapNotionPageToTask(page: any): Promise<Task> {
+    const notionTitle = page.properties.名前?.title?.[0]?.text?.content;
+    const notionDescription =
+      page.properties.テキスト?.rich_text?.[0]?.text?.content || '';
+    const taskUrl = page.properties.URL?.url || undefined;
+
+    // Fetch OGP data if URL exists
+    let ogpData: { title?: string; description?: string; image?: string } = {};
+    if (taskUrl) {
+      ogpData = await this.fetchOGPData(taskUrl);
+    }
+
     const task: Task = {
       id: page.id,
       sourceId: page.id,
-      title: page.properties.名前?.title?.[0]?.text?.content || 'Untitled',
-      description:
-        page.properties.テキスト?.rich_text?.[0]?.text?.content || '',
+      title: notionTitle || ogpData.title || 'Untitled',
+      description: notionDescription || ogpData.description || '',
       completed: false, // No completion status in this database
       stocked: page.properties.Stock?.checkbox,
       read: page.properties.既読?.checkbox,
@@ -263,23 +279,20 @@ export class NotionAPIClient implements APIClient {
       tags:
         // biome-ignore lint/suspicious/noExplicitAny: Notion API structure
         page.properties.タグ?.multi_select?.map((tag: any) => tag.name) || [],
-      url: page.properties.URL?.url || undefined,
+      url: taskUrl,
       iconUrl: undefined, // Disabled icon functionality
       notionPageUrl: page.url,
-      ogpImageUrl: undefined, // Will be set below
+      ogpImageUrl: ogpData.image,
     };
-
-    // Fetch OGP image if URL exists
-    if (task.url) {
-      task.ogpImageUrl = await this.fetchOGPImage(task.url);
-    }
 
     console.log('Mapping Notion page to task:', {
       title: task.title,
+      description: task.description,
       url: task.url,
       notionPageUrl: task.notionPageUrl,
       tags: task.tags,
       ogpImageUrl: task.ogpImageUrl,
+      ogpData,
     });
 
     return task;
