@@ -34,7 +34,7 @@ import { usePWAInstall } from '@/hooks/use-pwa-install';
 import { GoogleTasksAPIClient, NotionAPIClient } from '@/lib/api-clients';
 import { type AppSettings, dbManager } from '@/lib/indexeddb';
 import { Database, Download, Settings } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 interface SettingsMenuProps {
@@ -47,13 +47,7 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { canInstall, install } = usePWAInstall();
 
-  useEffect(() => {
-    if (open) {
-      loadSettings();
-    }
-  }, [open]);
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     try {
       await dbManager.init();
       const savedSettings = await dbManager.getSettings();
@@ -62,7 +56,7 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
       console.error('Failed to load settings:', error);
       toast.error('設定の読み込みに失敗しました');
     }
-  };
+  }, []);
 
   const handleSave = async () => {
     setIsLoading(true);
@@ -79,7 +73,45 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
     }
   };
 
-  const testConnection = async () => {
+  const toastStatus = useCallback((connectTo: string, status: boolean) => {
+    const statusMsg = status ? '成功' : '失敗';
+    const message = `${connectTo}への接続テストが${statusMsg}しました`;
+    toast.success(message);
+  }, []);
+
+  const testConnectionInner = useCallback(async () => {
+    if (settings.backendType === 'notion') {
+      if (!(settings.notionApiKey && settings.notionDatabaseId)) {
+        toast.error('Notion APIキーとデータベースIDを入力してください');
+        return;
+      }
+      const client = new NotionAPIClient(
+        settings.notionApiKey,
+        settings.notionDatabaseId,
+        settings.proxyServerUrl,
+      );
+      const isAuthenticated = await client.authenticate();
+      toastStatus('Notion', isAuthenticated);
+      return;
+    }
+
+    if (settings.backendType === 'google-tasks') {
+      if (!settings.googleTasksCredentials) {
+        toast.error('Google Tasks認証情報を入力してください');
+        return;
+      }
+
+      const client = new GoogleTasksAPIClient(
+        settings.googleTasksCredentials,
+        settings.proxyServerUrl,
+      );
+      const isAuthenticated = await client.authenticate();
+      toastStatus('Google Tasks', isAuthenticated);
+      return;
+    }
+  }, [toastStatus, settings]);
+
+  const testConnection = useCallback(async () => {
     if (!settings.backendType) {
       toast.error('バックエンドタイプを選択してください');
       return;
@@ -87,48 +119,19 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
 
     setIsLoading(true);
     try {
-      if (settings.backendType === 'notion') {
-        if (!(settings.notionApiKey && settings.notionDatabaseId)) {
-          toast.error('Notion APIキーとデータベースIDを入力してください');
-          return;
-        }
-
-        const client = new NotionAPIClient(
-          settings.notionApiKey,
-          settings.notionDatabaseId,
-          settings.proxyServerUrl,
-        );
-        const isAuthenticated = await client.authenticate();
-
-        if (isAuthenticated) {
-          toast.success('Notionへの接続に成功しました');
-        } else {
-          toast.error('Notionへの接続に失敗しました');
-        }
-      } else if (settings.backendType === 'google-tasks') {
-        if (!settings.googleTasksCredentials) {
-          toast.error('Google Tasks認証情報を入力してください');
-          return;
-        }
-
-        const client = new GoogleTasksAPIClient(
-          settings.googleTasksCredentials,
-          settings.proxyServerUrl,
-        );
-        const isAuthenticated = await client.authenticate();
-
-        if (isAuthenticated) {
-          toast.success('Google Tasksへの接続に成功しました');
-        } else {
-          toast.error('Google Tasksへの接続に失敗しました');
-        }
-      }
+      await testConnectionInner();
     } catch (_error) {
       toast.error('接続テストでエラーが発生しました');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [testConnectionInner, settings.backendType]);
+
+  useEffect(() => {
+    if (open) {
+      loadSettings();
+    }
+  }, [open, loadSettings]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -316,7 +319,7 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
                         'readwrite',
                       );
                       const store = transaction.objectStore('tasks');
-                      await store.clear();
+                      store.clear();
 
                       // Reset lastSync settings while keeping other settings
                       const currentSettings = await dbManager.getSettings();
