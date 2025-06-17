@@ -8,7 +8,11 @@ import { SettingsMenu } from '@/components/settings-menu';
 import { TaskCard } from '@/components/task-card';
 import { Button } from '@/components/ui/button';
 import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
-import { GoogleTasksAPIClient, NotionAPIClient } from '@/lib/api-clients';
+import {
+  type FetchTasksResult,
+  GoogleTasksAPIClient,
+  NotionAPIClient,
+} from '@/lib/api-clients';
 import { type AppSettings, type Task, dbManager } from '@/lib/indexeddb';
 import { Database, RefreshCw, Settings } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -164,7 +168,7 @@ export default function Home() {
     );
   }, [settings]);
 
-  const syncInner = useCallback(
+  const fetchTasks = useCallback(
     async (loadMore: boolean) => {
       const apiClient = getApiClient();
       if (!apiClient) {
@@ -187,39 +191,68 @@ export default function Home() {
       );
 
       // Race between fetch and timeout
-      const result = await Promise.race([fetchPromise, timeoutPromise]);
-      if (result.tasks.length === 0) {
+      const fetchedTasks = await Promise.race([fetchPromise, timeoutPromise]);
+      if (fetchedTasks.tasks.length === 0) {
         if (!loadMore) {
           toast.info('新しいタスクはありませんでした');
         }
         setHasMoreTasks(false);
         return;
       }
+      return fetchedTasks;
+    },
+    [getApiClient, settings.lastSyncAt, settings.lastSyncCursor],
+  );
 
-      // Get existing tasks from IndexedDB to preserve local state
-      const allExistingTasks = await dbManager.getTasks();
-      const existingTasksMap = new Map(
-        allExistingTasks.map((task) => [task.sourceId, task]),
-      );
+  const mergeTasks = useCallback(async (fetchedTasks: FetchTasksResult) => {
+    // Get existing tasks from IndexedDB to preserve local state
+    const allExistingTasks = await dbManager.getTasks();
+    const existingTasksMap = new Map(
+      allExistingTasks.map((task) => [task.sourceId, task]),
+    );
 
-      const mergedTasks = result.tasks.map((fetchedTask) => {
-        const existing = existingTasksMap.get(fetchedTask.sourceId);
-        return existing
-          ? {
-              ...fetchedTask,
-              read: existing.read,
-              stocked: existing.stocked,
-            }
-          : fetchedTask;
-      });
+    const mergedTasks = fetchedTasks.tasks.map((fetchedTask) => {
+      const existing = existingTasksMap.get(fetchedTask.sourceId);
+      return existing
+        ? {
+            ...fetchedTask,
+            read: existing.read,
+            stocked: existing.stocked,
+          }
+        : fetchedTask;
+    });
 
-      // Save to IndexedDB
-      for (const task of mergedTasks) {
-        try {
-          await dbManager.updateTask(task);
-        } catch {
-          await dbManager.addTask(task);
-        }
+    // Save to IndexedDB
+    for (const task of mergedTasks) {
+      try {
+        await dbManager.updateTask(task);
+      } catch {
+        await dbManager.addTask(task);
+      }
+    }
+    return mergedTasks;
+  }, []);
+
+  const fetchTasksWithMergeDB = useCallback(
+    async (loadMore: boolean) => {
+      const fetchedTasks = await fetchTasks(loadMore);
+      if (!fetchedTasks) {
+        return { fetchedTasks: null, mergedTasks: [] };
+      }
+      const mergedTasks = await mergeTasks(fetchedTasks);
+
+      return { fetchedTasks, mergedTasks };
+    },
+    [fetchTasks, mergeTasks],
+  );
+
+  const syncInner = useCallback(
+    async (loadMore: boolean) => {
+      const { fetchedTasks, mergedTasks } =
+        await fetchTasksWithMergeDB(loadMore);
+      if (!fetchedTasks) {
+        handleSyncError(new Error('No tasks fetched'));
+        return;
       }
 
       if (loadMore) {
@@ -237,22 +270,22 @@ export default function Home() {
         setTasks(removeDuplicateTasks(allTasks));
       }
 
-      setHasMoreTasks(result.hasMore);
+      setHasMoreTasks(fetchedTasks.hasMore);
 
       if (!loadMore) {
-        toast.success(`${result.tasks.length}件のタスクを同期しました`);
+        toast.success(`${fetchedTasks.tasks.length}件のタスクを同期しました`);
       }
 
       // Update sync settings
       const newSettings = {
         ...settings,
         lastSyncAt: new Date(),
-        lastSyncCursor: result.nextCursor,
+        lastSyncCursor: fetchedTasks.nextCursor,
       };
       await dbManager.saveSettings(newSettings);
       setSettings(newSettings);
     },
-    [removeDuplicateTasks, settings, getApiClient],
+    [removeDuplicateTasks, settings, fetchTasksWithMergeDB, handleSyncError],
   );
 
   // Sync data with backend (incremental)
