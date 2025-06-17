@@ -52,7 +52,7 @@ export default function Home() {
     });
   }, []);
 
-  const initializeApp = async () => {
+  const initializeApp = useCallback(async () => {
     try {
       await dbManager.init();
       await dbManager.persistStorage();
@@ -73,12 +73,12 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [removeDuplicateTasks]);
 
   // Initialize app
   useEffect(() => {
     initializeApp();
-  }, []);
+  }, [initializeApp]);
 
   // biome-ignore lint/suspicious/noExplicitAny: ignore
   const getSyncErrorMessage = useCallback((error: any) => {
