@@ -39,10 +39,19 @@ import { toast } from 'sonner';
 interface SettingsMenuProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  settings: AppSettings;
+  onSettingsChange: (settings: AppSettings) => void;
 }
 
-export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
-  const [settings, setSettings] = useState<AppSettings>({ backendType: null });
+export function SettingsMenu({
+  open,
+  onOpenChange,
+  settings: initialSettings,
+  onSettingsChange,
+}: SettingsMenuProps) {
+  const [settings, setSettings] = useState<AppSettings>(
+    initialSettings || { backendType: null },
+  );
   const [isLoading, setIsLoading] = useState(false);
   const { canInstall, install } = usePWAInstall();
 
@@ -62,6 +71,7 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
     try {
       await dbManager.init();
       await dbManager.saveSettings(settings);
+      onSettingsChange(settings);
       toast.success('設定を保存しました');
       onOpenChange(false);
     } catch (error) {
@@ -111,7 +121,7 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
   }, [toastStatus, settings]);
 
   const testConnection = useCallback(async () => {
-    if (!settings.backendType) {
+    if (!settings?.backendType) {
       toast.error('バックエンドタイプを選択してください');
       return;
     }
@@ -124,13 +134,19 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [testConnectionInner, settings.backendType]);
+  }, [testConnectionInner, settings?.backendType]);
 
   useEffect(() => {
     if (open) {
       loadSettings();
     }
   }, [open, loadSettings]);
+
+  useEffect(() => {
+    if (initialSettings) {
+      setSettings(initialSettings);
+    }
+  }, [initialSettings]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -292,12 +308,12 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
                 <AlertDialogDescription>
                   この操作により、以下のデータが削除されます：
                 </AlertDialogDescription>
-                <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-muted-foreground">
+                <ul className="mt-2 list-inside list-disc space-y-1 text-muted-foreground text-sm">
                   <li>すべてのタスクデータ</li>
                   <li>既読・ストック状態</li>
                   <li>最終同期情報</li>
                 </ul>
-                <p className="mt-3 text-sm font-semibold text-muted-foreground">
+                <p className="mt-3 font-semibold text-muted-foreground text-sm">
                   この操作は取り消すことができません。
                 </p>
               </AlertDialogHeader>

@@ -14,8 +14,10 @@ import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
 import { useTaskActions } from '@/hooks/use-task-actions';
 import { useTaskFilters } from '@/hooks/use-task-filters';
 import { useTaskSync } from '@/hooks/use-task-sync';
+import { dbManager } from '@/lib/indexeddb';
 import { RefreshCw } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 export default function Home() {
   const { tasks, setTasks, settings, setSettings, isLoading } =
@@ -31,10 +33,33 @@ export default function Home() {
     onError: showError,
   });
 
-  const { isRefreshing, isPulling, pullDistance } = usePullToRefresh(() => sync());
+  const { isRefreshing, isPulling, pullDistance } = usePullToRefresh(() =>
+    sync(),
+  );
 
   const { filteredTasks, filter, unreadCount, setSearchQuery, setFilter } =
     useTaskFilters(tasks);
+
+  const handleNotionSync = async () => {
+    try {
+      const result = await dbManager.syncTasksWithNotion();
+      if (result.success > 0) {
+        toast.success(`${result.success}件のタスクをNotionに同期しました`);
+      }
+      if (result.failed > 0) {
+        const errorMessage = result.failed === 1 
+          ? 'タスクの同期に失敗しました。CORSプロキシがPATCHメソッドをサポートしていない可能性があります。'
+          : `${result.failed}件のタスクの同期に失敗しました`;
+        toast.error(errorMessage);
+      }
+    } catch (error) {
+      console.error('Notion sync failed:', error);
+      const errorMessage = error instanceof Error && error.message.includes('CORS')
+        ? error.message
+        : 'Notion同期中にエラーが発生しました';
+      toast.error(errorMessage);
+    }
+  };
 
   const { handleToggleRead, handleToggleStock, handleDelete, handleShare } =
     useTaskActions({
@@ -46,6 +71,7 @@ export default function Home() {
       onTaskDelete: (taskId) => {
         setTasks((prev) => prev.filter((task) => task.id !== taskId));
       },
+      onNotionSync: handleNotionSync,
     });
 
   if (isLoading) {
@@ -103,7 +129,12 @@ export default function Home() {
         )}
       </main>
 
-      <SettingsMenu open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <SettingsMenu
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        settings={settings}
+        onSettingsChange={setSettings}
+      />
 
       <ErrorDialog
         isOpen={errorDialog.isOpen}

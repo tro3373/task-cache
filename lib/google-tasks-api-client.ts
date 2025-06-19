@@ -46,6 +46,7 @@ export class GoogleTasksAPIClient implements APIClient {
       createdAt: new Date(),
       updatedAt: new Date(),
       source: 'google-tasks' as const,
+      syncedWithNotion: true,
     });
   }
 

@@ -32,7 +32,7 @@ export function ErrorDialog({
             <AlertCircle className="h-5 w-5 text-destructive" />
             {title}
           </AlertDialogTitle>
-          <AlertDialogDescription asChild>
+          <AlertDialogDescription asChild={true}>
             <div className="space-y-3">
               <p>{message}</p>
               {details && (

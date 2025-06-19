@@ -5,11 +5,13 @@ import { toast } from 'sonner';
 interface UseTaskActionsOptions {
   onTaskUpdate: (task: Task) => void;
   onTaskDelete: (taskId: string) => void;
+  onNotionSync?: () => Promise<void>;
 }
 
 export function useTaskActions({
   onTaskUpdate,
   onTaskDelete,
+  onNotionSync,
 }: UseTaskActionsOptions) {
   const handleToggleRead = useCallback(
     async (task: Task) => {
@@ -17,8 +19,12 @@ export function useTaskActions({
       await dbManager.updateTask(updatedTask);
       onTaskUpdate(updatedTask);
       toast.success(updatedTask.read ? '既読にしました' : '未読にしました');
+
+      if (onNotionSync && task.source === 'notion') {
+        await onNotionSync();
+      }
     },
-    [onTaskUpdate],
+    [onTaskUpdate, onNotionSync],
   );
 
   const handleToggleStock = useCallback(
@@ -33,8 +39,12 @@ export function useTaskActions({
       toast.success(
         updatedTask.stocked ? 'ストックしました' : 'ストックを解除しました',
       );
+
+      if (onNotionSync && task.source === 'notion') {
+        await onNotionSync();
+      }
     },
-    [onTaskUpdate],
+    [onTaskUpdate, onNotionSync],
   );
 
   const handleDelete = useCallback(

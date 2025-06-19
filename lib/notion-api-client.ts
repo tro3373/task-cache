@@ -201,38 +201,57 @@ export class NotionAPIClient implements APIClient {
     });
 
     const data = await response.json();
-    return await this.mapNotionPageToTask(data);
+    const createdTask = await this.mapNotionPageToTask(data);
+    createdTask.syncedWithNotion = true;
+    return createdTask;
   }
 
   async updateTask(task: Task): Promise<Task> {
     const url = this.buildUrl(
       `https://api.notion.com/v1/pages/${task.sourceId}`,
     );
-    const response = await fetch(url, {
-      method: 'PATCH',
-      headers: this.getCommonHeaders(),
-      body: JSON.stringify({
-        properties: {
-          名前: {
-            title: [{ text: { content: task.title } }],
-          },
-          テキスト: {
+    
+    try {
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers: this.getCommonHeaders(),
+        body: JSON.stringify({
+          properties: {
+            名前: {
+              title: [{ text: { content: task.title } }],
+            },
+            テキスト: {
+              // biome-ignore lint/style/useNamingConvention: Notion API field
+              rich_text: [{ text: { content: task.description || '' } }],
+            },
             // biome-ignore lint/style/useNamingConvention: Notion API field
-            rich_text: [{ text: { content: task.description || '' } }],
+            Stock: {
+              checkbox: task.stocked,
+            },
+            既読: {
+              checkbox: task.read,
+            },
           },
-          // biome-ignore lint/style/useNamingConvention: Notion API field
-          Stock: {
-            checkbox: task.stocked,
-          },
-          既読: {
-            checkbox: task.read,
-          },
-        },
-      }),
-    });
+        }),
+      });
 
-    const data = await response.json();
-    return await this.mapNotionPageToTask(data);
+      if (!response.ok) {
+        throw new Error(`Notion API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const updatedTask = await this.mapNotionPageToTask(data);
+      updatedTask.syncedWithNotion = true;
+      return updatedTask;
+    } catch (error) {
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        throw new Error(
+          'CORSエラー: 現在使用中のプロキシサーバーはPATCHメソッドをサポートしていません。' +
+          '別のプロキシサーバーを設定するか、Notion APIを直接使用できる環境で実行してください。'
+        );
+      }
+      throw error;
+    }
   }
 
   async deleteTask(id: string): Promise<void> {
@@ -278,6 +297,7 @@ export class NotionAPIClient implements APIClient {
       iconUrl: undefined, // Disabled icon functionality
       notionPageUrl: page.url,
       ogpImageUrl: ogpData.image,
+      syncedWithNotion: true,
     };
 
     console.log('Mapping Notion page to task:', {
