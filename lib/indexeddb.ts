@@ -26,6 +26,8 @@ export interface AppSettings {
   proxyServerUrl?: string;
   lastSyncAt?: Date;
   lastSyncCursor?: string;
+  newestTaskCreatedAt?: Date;
+  oldestTaskCreatedAt?: Date;
 }
 
 class IndexedDbManager {

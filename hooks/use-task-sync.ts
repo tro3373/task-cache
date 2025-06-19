@@ -1,4 +1,3 @@
-import type { FetchTasksResult } from '@/lib/api-clients';
 import { GoogleTasksAPIClient } from '@/lib/google-tasks-api-client';
 import { type AppSettings, type Task, dbManager } from '@/lib/indexeddb';
 import { NotionAPIClient } from '@/lib/notion-api-client';
@@ -27,17 +26,6 @@ export function useTaskSync({
   const [syncState, setSyncState] = useState<SyncState>('idle');
   const [hasMoreTasks, setHasMoreTasks] = useState(false);
 
-  const removeDuplicateTasks = useCallback((tasks: Task[]): Task[] => {
-    const seen = new Set<string>();
-    return tasks.filter((task) => {
-      if (seen.has(task.id)) {
-        return false;
-      }
-      seen.add(task.id);
-      return true;
-    });
-  }, []);
-
   const getApiClient = useCallback(():
     | NotionAPIClient
     | GoogleTasksAPIClient
@@ -63,6 +51,36 @@ export function useTaskSync({
     );
   }, [settings]);
 
+  const fetchNewTasks = useCallback(
+    (apiClient: NotionAPIClient | GoogleTasksAPIClient) => {
+      if (!settings.newestTaskCreatedAt) {
+        // First sync: get latest tasks
+        return apiClient.fetchTasks(undefined, undefined, 20);
+      }
+
+      // Get tasks newer than the newest existing task
+      return apiClient.fetchTasks(undefined, undefined, 20, {
+        type: 'after',
+        date: settings.newestTaskCreatedAt,
+      });
+    },
+    [settings.newestTaskCreatedAt],
+  );
+
+  const fetchOlderTasks = useCallback(
+    (apiClient: NotionAPIClient | GoogleTasksAPIClient) => {
+      if (!settings.oldestTaskCreatedAt) {
+        return { tasks: [], hasMore: false };
+      }
+
+      return apiClient.fetchTasks(undefined, undefined, 20, {
+        type: 'before',
+        date: settings.oldestTaskCreatedAt,
+      });
+    },
+    [settings.oldestTaskCreatedAt],
+  );
+
   const fetchTasks = useCallback(
     async (loadMore: boolean) => {
       const apiClient = getApiClient();
@@ -70,22 +88,16 @@ export function useTaskSync({
         return;
       }
 
-      // Create timeout promise
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
           reject(new Error('Request timeout'));
-        }, 30000); // 30 seconds timeout
+        }, 30000);
       });
 
-      // For incremental sync, use lastSyncAt for filtering
-      // For pagination, use lastSyncCursor
-      const fetchPromise = apiClient.fetchTasks(
-        loadMore ? undefined : settings.lastSyncAt,
-        loadMore ? settings.lastSyncCursor : undefined,
-        20,
-      );
+      const fetchPromise = loadMore
+        ? fetchOlderTasks(apiClient)
+        : fetchNewTasks(apiClient);
 
-      // Race between fetch and timeout
       const fetchedTasks = await Promise.race([fetchPromise, timeoutPromise]);
       if (fetchedTasks.tasks.length === 0) {
         if (!loadMore) {
@@ -96,37 +108,8 @@ export function useTaskSync({
       }
       return fetchedTasks;
     },
-    [getApiClient, settings.lastSyncAt, settings.lastSyncCursor],
+    [getApiClient, fetchNewTasks, fetchOlderTasks],
   );
-
-  const mergeTasks = useCallback(async (fetchedTasks: FetchTasksResult) => {
-    // Get existing tasks from IndexedDB to preserve local state
-    const allExistingTasks = await dbManager.getTasks();
-    const existingTasksMap = new Map(
-      allExistingTasks.map((task) => [task.sourceId, task]),
-    );
-
-    const mergedTasks = fetchedTasks.tasks.map((fetchedTask) => {
-      const existing = existingTasksMap.get(fetchedTask.sourceId);
-      return existing
-        ? {
-            ...fetchedTask,
-            read: existing.read,
-            stocked: existing.stocked,
-          }
-        : fetchedTask;
-    });
-
-    // Save to IndexedDB
-    for (const task of mergedTasks) {
-      try {
-        await dbManager.updateTask(task);
-      } catch {
-        await dbManager.addTask(task);
-      }
-    }
-    return mergedTasks;
-  }, []);
 
   const getSyncErrorMessage = useCallback(
     (
@@ -205,6 +188,37 @@ export function useTaskSync({
     [onError, getSyncErrorMessage],
   );
 
+  const updateCreatedAtRange = useCallback(
+    (tasks: Task[], currentSettings: AppSettings) => {
+      if (tasks.length === 0) {
+        return currentSettings;
+      }
+
+      const taskCreatedAts = tasks.map((task) => new Date(task.createdAt));
+      const minCreatedAt = new Date(
+        Math.min(...taskCreatedAts.map((d) => d.getTime())),
+      );
+      const maxCreatedAt = new Date(
+        Math.max(...taskCreatedAts.map((d) => d.getTime())),
+      );
+
+      return {
+        ...currentSettings,
+        newestTaskCreatedAt:
+          !currentSettings.newestTaskCreatedAt ||
+          maxCreatedAt > currentSettings.newestTaskCreatedAt
+            ? maxCreatedAt
+            : currentSettings.newestTaskCreatedAt,
+        oldestTaskCreatedAt:
+          !currentSettings.oldestTaskCreatedAt ||
+          minCreatedAt < currentSettings.oldestTaskCreatedAt
+            ? minCreatedAt
+            : currentSettings.oldestTaskCreatedAt,
+      };
+    },
+    [],
+  );
+
   const sync = useCallback(
     async (loadMore = false) => {
       if (!settings.backendType) {
@@ -220,17 +234,15 @@ export function useTaskSync({
           return;
         }
 
-        const mergedTasks = await mergeTasks(fetchedTasks);
-
-        let currentTasks = await dbManager.getTasks();
-        if (loadMore) {
-          const existingIds = new Set(currentTasks.map((task) => task.id));
-          const newTasks = mergedTasks.filter(
-            (task) => !existingIds.has(task.id),
-          );
-          currentTasks = [...currentTasks, ...newTasks];
+        // Simply add all fetched tasks to IndexedDB
+        // No duplicate handling needed due to date filtering
+        for (const task of fetchedTasks.tasks) {
+          await dbManager.addTask(task);
         }
-        onTasksUpdated(removeDuplicateTasks(currentTasks));
+
+        // Update UI with all tasks from DB
+        const allTasks = await dbManager.getTasks();
+        onTasksUpdated(allTasks);
 
         setHasMoreTasks(fetchedTasks.hasMore);
 
@@ -238,12 +250,12 @@ export function useTaskSync({
           toast.success(`${fetchedTasks.tasks.length}件のタスクを同期しました`);
         }
 
-        // Update sync settings
-        const newSettings = {
+        // Update sync settings with createdAt range
+        const newSettings = updateCreatedAtRange(fetchedTasks.tasks, {
           ...settings,
           lastSyncAt: new Date(),
-          lastSyncCursor: fetchedTasks.nextCursor,
-        };
+        });
+
         await dbManager.saveSettings(newSettings);
         onSettingsUpdated(newSettings);
       } catch (error) {
@@ -255,8 +267,7 @@ export function useTaskSync({
     [
       settings,
       fetchTasks,
-      mergeTasks,
-      removeDuplicateTasks,
+      updateCreatedAtRange,
       onTasksUpdated,
       onSettingsUpdated,
       handleSyncError,

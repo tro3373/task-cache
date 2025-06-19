@@ -1,4 +1,4 @@
-import type { APIClient, FetchTasksResult } from './api-clients';
+import type { APIClient, DateFilter, FetchTasksResult } from './api-clients';
 import type { Task } from './indexeddb';
 
 export class GoogleTasksAPIClient implements APIClient {
@@ -24,6 +24,7 @@ export class GoogleTasksAPIClient implements APIClient {
     _lastSyncAt?: Date,
     _startCursor?: string,
     _pageSize = 50,
+    _dateFilter?: DateFilter,
   ): Promise<FetchTasksResult> {
     // Mock implementation - in reality, this would use Google Tasks API
     return Promise.resolve({

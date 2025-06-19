@@ -1,4 +1,4 @@
-import type { APIClient, FetchTasksResult } from './api-clients';
+import type { APIClient, DateFilter, FetchTasksResult } from './api-clients';
 import type { Task } from './indexeddb';
 
 export class NotionAPIClient implements APIClient {
@@ -27,10 +27,7 @@ export class NotionAPIClient implements APIClient {
 
   private buildDateFilter(
     lastSyncAt?: Date,
-    dateFilter?: {
-      type: 'after' | 'before' | 'on_or_after' | 'on_or_before';
-      date: Date;
-    },
+    dateFilter?: DateFilter,
   ): object | undefined {
     if (dateFilter) {
       const filterObj = {
@@ -117,10 +114,7 @@ export class NotionAPIClient implements APIClient {
     lastSyncAt?: Date,
     startCursor?: string,
     pageSize = 50,
-    dateFilter?: {
-      type: 'after' | 'before' | 'on_or_after' | 'on_or_before';
-      date: Date;
-    },
+    dateFilter?: DateFilter,
   ): Promise<FetchTasksResult> {
     try {
       const url = this.buildUrl(
