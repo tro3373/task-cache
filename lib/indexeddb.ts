@@ -94,6 +94,39 @@ class IndexedDbManager {
   }
 
   async addTask(task: Task): Promise<void> {
+    const existingTask = await this.getTaskById(task.id);
+    if (existingTask) {
+      return this.mergeAndUpdateTask(existingTask, task);
+    }
+    return this.insertNewTask(task);
+  }
+
+  private async getTaskById(id: string): Promise<Task | null> {
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+
+    const db = this.db;
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['tasks'], 'readonly');
+      const store = transaction.objectStore('tasks');
+      const request = store.get(id);
+
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  private async mergeAndUpdateTask(existingTask: Task, newTask: Task): Promise<void> {
+    const mergedTask = {
+      ...newTask,
+      read: existingTask.read,
+      stocked: existingTask.stocked,
+    };
+    return this.updateTask(mergedTask);
+  }
+
+  private async insertNewTask(task: Task): Promise<void> {
     if (!this.db) {
       throw new Error('Database not initialized');
     }

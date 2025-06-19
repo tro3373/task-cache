@@ -31,7 +31,7 @@ export default function Home() {
     onError: showError,
   });
 
-  const { isRefreshing, isPulling, pullDistance } = usePullToRefresh(sync);
+  const { isRefreshing, isPulling, pullDistance } = usePullToRefresh(() => sync());
 
   const { filteredTasks, filter, unreadCount, setSearchQuery, setFilter } =
     useTaskFilters(tasks);
@@ -70,7 +70,7 @@ export default function Home() {
       />
 
       <Header
-        onRefresh={sync}
+        onRefresh={() => sync()}
         onSearch={setSearchQuery}
         onFilterChange={setFilter}
         isRefreshing={isRefreshing}
@@ -84,7 +84,7 @@ export default function Home() {
           filteredTasks.length === 0 ? (
             <EmptyState
               hasNoTasks={tasks.length === 0}
-              onRefresh={sync}
+              onRefresh={() => sync()}
               isRefreshing={isRefreshing}
             />
           ) : (

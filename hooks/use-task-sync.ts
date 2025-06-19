@@ -104,7 +104,6 @@ export function useTaskSync({
           toast.info('新しいタスクはありませんでした');
         }
         setHasMoreTasks(false);
-        return;
       }
       return fetchedTasks;
     },

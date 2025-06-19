@@ -32,15 +32,17 @@ export function ErrorDialog({
             <AlertCircle className="h-5 w-5 text-destructive" />
             {title}
           </AlertDialogTitle>
-          <AlertDialogDescription className="space-y-3">
-            <p>{message}</p>
-            {details && (
-              <div className="rounded-md bg-muted p-3">
-                <p className="whitespace-pre-wrap break-all font-mono text-xs">
-                  {details}
-                </p>
-              </div>
-            )}
+          <AlertDialogDescription asChild>
+            <div className="space-y-3">
+              <p>{message}</p>
+              {details && (
+                <div className="rounded-md bg-muted p-3">
+                  <p className="whitespace-pre-wrap break-all font-mono text-xs">
+                    {details}
+                  </p>
+                </div>
+              )}
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
