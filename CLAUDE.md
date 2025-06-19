@@ -23,7 +23,9 @@ This is **TaskCache**, a Progressive Web App (PWA) that synchronizes and manages
 ### Important Files Structure
 - `app/page.tsx` - Main application logic and state management
 - `lib/indexeddb.ts` - Database schema and operations
-- `lib/api-clients.ts` - External API integrations (Notion, Google Tasks)
+- `lib/api-clients.ts` - API client interfaces and types
+- `lib/notion-api-client.ts` - Notion API client implementation
+- `lib/google-tasks-api-client.ts` - Google Tasks API client implementation
 - `components/` - UI components including task cards and settings
 - `hooks/` - Custom hooks for pull-to-refresh, PWA install, toast notifications
 
@@ -69,7 +71,11 @@ make npmi-<pkg>   # Install specific package
 - Storage persistence is requested for offline reliability
 
 ### API Integration
-- **Notion**: Uses v2022-06-28 API with database queries
+- **Architecture**: API clients are split into separate files for better maintainability
+  - `lib/api-clients.ts` - Common interfaces (`APIClient`, `FetchTasksResult`) and types
+  - `lib/notion-api-client.ts` - Notion API implementation with OGP data fetching
+  - `lib/google-tasks-api-client.ts` - Google Tasks API implementation (currently mock)
+- **Notion**: Uses v2022-06-28 API with database queries, includes OGP metadata fetching
 - **Google Tasks**: Currently mock implementation (authentication placeholder)
 - Tasks are merged with local state, preserving user-specific flags (read/stocked)
 
