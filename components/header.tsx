@@ -10,7 +10,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Filter, Menu, RefreshCw, Search } from 'lucide-react';
 import { useState } from 'react';
-import { SettingsMenu } from './settings-menu';
 
 interface HeaderProps {
   onRefresh: () => void;
@@ -20,6 +19,7 @@ interface HeaderProps {
   totalTasks: number;
   unreadCount: number;
   currentFilter: string;
+  onOpenSettings: () => void;
 }
 
 export function Header({
@@ -30,8 +30,8 @@ export function Header({
   totalTasks,
   unreadCount,
   currentFilter,
+  onOpenSettings,
 }: HeaderProps) {
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSearch = (value: string) => {
@@ -40,8 +40,7 @@ export function Header({
   };
 
   return (
-    <>
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-4">
             <h1 className="bg-gradient-to-r from-primary to-blue-600 bg-clip-text font-bold text-transparent text-xl">
@@ -134,7 +133,7 @@ export function Header({
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
+                <DropdownMenuItem onClick={onOpenSettings}>
                   設定
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -155,8 +154,5 @@ export function Header({
           </div>
         </div>
       </header>
-
-      <SettingsMenu open={settingsOpen} onOpenChange={setSettingsOpen} />
-    </>
-  );
-}
+    );
+  }

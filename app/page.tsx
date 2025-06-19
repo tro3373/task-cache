@@ -103,6 +103,7 @@ export default function Home() {
         totalTasks={tasks.length}
         unreadCount={unreadCount}
         currentFilter={filter}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
 
       <main className="container px-4 py-6">
