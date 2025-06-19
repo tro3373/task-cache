@@ -1,4 +1,5 @@
 # svc api_name method url save_env_vals={variable_name}:{jq_path},{variable_name2}:{jq_path}
 notion get_readings POST $notion_endpoint_prefix/databases/$database_id/query
+notion get_database GET $notion_endpoint_prefix/databases/$database_id
 
 proxy  get_ogp GET $ogp_endpoint_prefix$encoded_url
