@@ -16,6 +16,45 @@ export class NotionAPIClient implements APIClient {
     return this.proxyUrl ? `${this.proxyUrl}${encodeURIComponent(url)}` : url;
   }
 
+  private getCommonHeaders(): HeadersInit {
+    return {
+      // biome-ignore lint/style/useNamingConvention: HTTP header name
+      Authorization: `Bearer ${this.apiKey}`,
+      'Notion-Version': '2022-06-28',
+      'Content-Type': 'application/json',
+    };
+  }
+
+  private buildDateFilter(
+    lastSyncAt?: Date,
+    dateFilter?: {
+      type: 'after' | 'before' | 'on_or_after' | 'on_or_before';
+      date: Date;
+    },
+  ): object | undefined {
+    if (dateFilter) {
+      const filterObj = {
+        property: '作成日時',
+        // biome-ignore lint/style/useNamingConvention: Notion API field
+        created_time: {} as Record<string, string>,
+      };
+      filterObj.created_time[dateFilter.type] = dateFilter.date.toISOString();
+      return filterObj;
+    }
+
+    if (lastSyncAt) {
+      return {
+        property: '作成日時',
+        // biome-ignore lint/style/useNamingConvention: Notion API field
+        created_time: {
+          after: lastSyncAt.toISOString(),
+        },
+      };
+    }
+
+    return undefined;
+  }
+
   private async fetchOGPData(
     url: string,
   ): Promise<{ title?: string; description?: string; image?: string }> {
@@ -62,12 +101,10 @@ export class NotionAPIClient implements APIClient {
       const url = this.buildUrl(
         `https://api.notion.com/v1/databases/${this.databaseId}`,
       );
+      const headers = this.getCommonHeaders();
+
       const response = await fetch(url, {
-        headers: {
-          // biome-ignore lint/style/useNamingConvention: HTTP header name
-          Authorization: `Bearer ${this.apiKey}`,
-          'Notion-Version': '2022-06-28',
-        },
+        headers,
       });
       return response.ok;
     } catch (error) {
@@ -80,6 +117,10 @@ export class NotionAPIClient implements APIClient {
     lastSyncAt?: Date,
     startCursor?: string,
     pageSize = 50,
+    dateFilter?: {
+      type: 'after' | 'before' | 'on_or_after' | 'on_or_before';
+      date: Date;
+    },
   ): Promise<FetchTasksResult> {
     try {
       const url = this.buildUrl(
@@ -98,25 +139,17 @@ export class NotionAPIClient implements APIClient {
         requestBody.start_cursor = startCursor;
       }
 
-      // Add filter for incremental sync (created_time > lastSyncAt)
-      if (lastSyncAt && !startCursor) {
-        requestBody.filter = {
-          property: '作成日時',
-          // biome-ignore lint/style/useNamingConvention: Notion API field
-          created_time: {
-            after: lastSyncAt.toISOString(),
-          },
-        };
+      // Add date filter if not using pagination cursor
+      if (!startCursor) {
+        const filter = this.buildDateFilter(lastSyncAt, dateFilter);
+        if (filter) {
+          requestBody.filter = filter;
+        }
       }
 
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          // biome-ignore lint/style/useNamingConvention: HTTP header name
-          Authorization: `Bearer ${this.apiKey}`,
-          'Notion-Version': '2022-06-28',
-          'Content-Type': 'application/json',
-        },
+        headers: this.getCommonHeaders(),
         body: JSON.stringify(requestBody),
       });
 
@@ -150,12 +183,7 @@ export class NotionAPIClient implements APIClient {
     const url = this.buildUrl('https://api.notion.com/v1/pages');
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        // biome-ignore lint/style/useNamingConvention: HTTP header name
-        Authorization: `Bearer ${this.apiKey}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json',
-      },
+      headers: this.getCommonHeaders(),
       body: JSON.stringify({
         // biome-ignore lint/style/useNamingConvention: Notion API field
         parent: { database_id: this.databaseId },
@@ -188,12 +216,7 @@ export class NotionAPIClient implements APIClient {
     );
     const response = await fetch(url, {
       method: 'PATCH',
-      headers: {
-        // biome-ignore lint/style/useNamingConvention: HTTP header name
-        Authorization: `Bearer ${this.apiKey}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json',
-      },
+      headers: this.getCommonHeaders(),
       body: JSON.stringify({
         properties: {
           名前: {
@@ -222,12 +245,7 @@ export class NotionAPIClient implements APIClient {
     const url = this.buildUrl(`https://api.notion.com/v1/pages/${id}`);
     await fetch(url, {
       method: 'PATCH',
-      headers: {
-        // biome-ignore lint/style/useNamingConvention: HTTP header name
-        Authorization: `Bearer ${this.apiKey}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json',
-      },
+      headers: this.getCommonHeaders(),
       body: JSON.stringify({
         archived: true,
       }),
