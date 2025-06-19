@@ -291,15 +291,15 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
                 <AlertDialogTitle>データをクリアしますか？</AlertDialogTitle>
                 <AlertDialogDescription>
                   この操作により、以下のデータが削除されます：
-                  <ul className="mt-2 list-inside list-disc space-y-1">
-                    <li>すべてのタスクデータ</li>
-                    <li>既読・ストック状態</li>
-                    <li>最終同期情報</li>
-                  </ul>
-                  <p className="mt-3 font-semibold">
-                    この操作は取り消すことができません。
-                  </p>
                 </AlertDialogDescription>
+                <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-muted-foreground">
+                  <li>すべてのタスクデータ</li>
+                  <li>既読・ストック状態</li>
+                  <li>最終同期情報</li>
+                </ul>
+                <p className="mt-3 text-sm font-semibold text-muted-foreground">
+                  この操作は取り消すことができません。
+                </p>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>キャンセル</AlertDialogCancel>
@@ -320,12 +320,13 @@ export function SettingsMenu({ open, onOpenChange }: SettingsMenuProps) {
                       const store = transaction.objectStore('tasks');
                       store.clear();
 
-                      // Reset lastSync settings while keeping other settings
+                      // Reset sync range settings while keeping other settings
                       const currentSettings = await dbManager.getSettings();
                       const newSettings = {
                         ...currentSettings,
-                        lastSyncAt: undefined,
                         lastSyncCursor: undefined,
+                        newestTaskCreatedAt: undefined,
+                        oldestTaskCreatedAt: undefined,
                       };
                       await dbManager.saveSettings(newSettings);
 
