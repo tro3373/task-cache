@@ -1,5 +1,3 @@
-'use client';
-
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,8 +29,9 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { usePWAInstall } from '@/hooks/use-pwa-install';
-import { GoogleTasksAPIClient, NotionAPIClient } from '@/lib/api-clients';
+import { GoogleTasksAPIClient } from '@/lib/google-tasks-api-client';
 import { type AppSettings, dbManager } from '@/lib/indexeddb';
+import { NotionAPIClient } from '@/lib/notion-api-client';
 import { Database, Download, Settings } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
