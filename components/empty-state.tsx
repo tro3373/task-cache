@@ -13,8 +13,9 @@ export function EmptyState({
   isRefreshing,
 }: EmptyStateProps) {
   return (
-    <div className="py-16 text-center">
-      <div className="mb-4 text-6xl">📝</div>
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="w-full max-w-md text-center">
+        <div className="mb-4 text-6xl">📝</div>
       <h2 className="mb-2 font-semibold text-2xl">
         {hasNoTasks ? 'タスクがありません' : '条件に合うタスクがありません'}
       </h2>
@@ -46,6 +47,7 @@ export function EmptyState({
           </span>
         </Button>
       )}
+      </div>
     </div>
   );
 }

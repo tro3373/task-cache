@@ -85,7 +85,7 @@ export function Header({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild={true}>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
                 <Menu className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
