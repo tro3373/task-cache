@@ -14,8 +14,6 @@ export interface DateFilter {
 export interface APIClient {
   authenticate(): Promise<boolean>;
   fetchTasks(
-    lastSyncAt?: Date,
-    startCursor?: string,
     pageSize?: number,
     dateFilter?: DateFilter,
   ): Promise<FetchTasksResult>;

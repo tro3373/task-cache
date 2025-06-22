@@ -25,10 +25,7 @@ export class NotionAPIClient implements APIClient {
     };
   }
 
-  private buildDateFilter(
-    lastSyncAt?: Date,
-    dateFilter?: DateFilter,
-  ): object | undefined {
+  private buildDateFilter(dateFilter?: DateFilter): object | undefined {
     if (dateFilter) {
       const filterObj = {
         property: '作成日時',
@@ -37,16 +34,6 @@ export class NotionAPIClient implements APIClient {
       };
       filterObj.created_time[dateFilter.type] = dateFilter.date.toISOString();
       return filterObj;
-    }
-
-    if (lastSyncAt) {
-      return {
-        property: '作成日時',
-        // biome-ignore lint/style/useNamingConvention: Notion API field
-        created_time: {
-          after: lastSyncAt.toISOString(),
-        },
-      };
     }
 
     return undefined;
@@ -111,59 +98,11 @@ export class NotionAPIClient implements APIClient {
   }
 
   async fetchTasks(
-    lastSyncAt?: Date,
-    startCursor?: string,
     pageSize = 50,
     dateFilter?: DateFilter,
   ): Promise<FetchTasksResult> {
     try {
-      const url = this.buildUrl(
-        `https://api.notion.com/v1/databases/${this.databaseId}/query`,
-      );
-
-      // biome-ignore lint/suspicious/noExplicitAny: Notion API request body
-      const requestBody: any = {
-        sorts: [{ property: '作成日時', direction: 'descending' }],
-        // biome-ignore lint/style/useNamingConvention: Notion API field
-        page_size: pageSize,
-      };
-
-      // Add start_cursor for pagination
-      if (startCursor) {
-        requestBody.start_cursor = startCursor;
-      }
-
-      // Add date filter if not using pagination cursor
-      if (!startCursor) {
-        const filter = this.buildDateFilter(lastSyncAt, dateFilter);
-        if (filter) {
-          requestBody.filter = filter;
-        }
-      }
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: this.getCommonHeaders(),
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Notion API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      // Map pages to tasks with OGP image fetching
-      const tasks = await Promise.all(
-        // biome-ignore lint/suspicious/noExplicitAny: Notion API response
-        data.results.map((page: any) => this.mapNotionPageToTask(page)),
-      );
-
-      return {
-        tasks,
-        hasMore: data.has_more,
-        nextCursor: data.next_cursor || undefined,
-      };
+      return await this.fetchTasksInner(pageSize, dateFilter);
     } catch (error) {
       console.error('Failed to fetch Notion tasks:', error);
       return {
@@ -171,6 +110,52 @@ export class NotionAPIClient implements APIClient {
         hasMore: false,
       };
     }
+  }
+
+  async fetchTasksInner(
+    pageSize: number,
+    dateFilter?: DateFilter,
+  ): Promise<FetchTasksResult> {
+    const url = this.buildUrl(
+      `https://api.notion.com/v1/databases/${this.databaseId}/query`,
+    );
+
+    // biome-ignore lint/suspicious/noExplicitAny: Notion API request body
+    const requestBody: any = {
+      sorts: [{ property: '作成日時', direction: 'descending' }],
+      // biome-ignore lint/style/useNamingConvention: Notion API field
+      page_size: pageSize,
+    };
+
+    // Add date filter
+    const filter = this.buildDateFilter(dateFilter);
+    if (filter) {
+      requestBody.filter = filter;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: this.getCommonHeaders(),
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Notion API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Map pages to tasks with OGP image fetching
+    const tasks = await Promise.all(
+      // biome-ignore lint/suspicious/noExplicitAny: Notion API response
+      data.results.map((page: any) => this.mapNotionPageToTask(page)),
+    );
+
+    return {
+      tasks,
+      hasMore: data.has_more,
+      nextCursor: data.next_cursor || undefined,
+    };
   }
 
   async createTask(task: Partial<Task>): Promise<Task> {
@@ -210,7 +195,7 @@ export class NotionAPIClient implements APIClient {
     const url = this.buildUrl(
       `https://api.notion.com/v1/pages/${task.sourceId}`,
     );
-    
+
     try {
       const response = await fetch(url, {
         method: 'PATCH',
@@ -236,7 +221,9 @@ export class NotionAPIClient implements APIClient {
       });
 
       if (!response.ok) {
-        throw new Error(`Notion API error: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Notion API error: ${response.status} ${response.statusText}`,
+        );
       }
 
       const data = await response.json();
@@ -247,7 +234,7 @@ export class NotionAPIClient implements APIClient {
       if (error instanceof TypeError && error.message === 'Failed to fetch') {
         throw new Error(
           'CORSエラー: 現在使用中のプロキシサーバーはPATCHメソッドをサポートしていません。' +
-          '別のプロキシサーバーを設定するか、Notion APIを直接使用できる環境で実行してください。'
+            '別のプロキシサーバーを設定するか、Notion APIを直接使用できる環境で実行してください。',
         );
       }
       throw error;

@@ -47,16 +47,18 @@ export default function Home() {
         toast.success(`${result.success}件のタスクをNotionに同期しました`);
       }
       if (result.failed > 0) {
-        const errorMessage = result.failed === 1 
-          ? 'タスクの同期に失敗しました。CORSプロキシがPATCHメソッドをサポートしていない可能性があります。'
-          : `${result.failed}件のタスクの同期に失敗しました`;
+        const errorMessage =
+          result.failed === 1
+            ? 'タスクの同期に失敗しました。CORSプロキシがPATCHメソッドをサポートしていない可能性があります。'
+            : `${result.failed}件のタスクの同期に失敗しました`;
         toast.error(errorMessage);
       }
     } catch (error) {
       console.error('Notion sync failed:', error);
-      const errorMessage = error instanceof Error && error.message.includes('CORS')
-        ? error.message
-        : 'Notion同期中にエラーが発生しました';
+      const errorMessage =
+        error instanceof Error && error.message.includes('CORS')
+          ? error.message
+          : 'Notion同期中にエラーが発生しました';
       toast.error(errorMessage);
     }
   };

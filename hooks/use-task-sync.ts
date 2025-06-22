@@ -55,11 +55,11 @@ export function useTaskSync({
     (apiClient: NotionAPIClient | GoogleTasksAPIClient) => {
       if (!settings.newestTaskCreatedAt) {
         // First sync: get latest tasks
-        return apiClient.fetchTasks(undefined, undefined, 20);
+        return apiClient.fetchTasks(20);
       }
 
       // Get tasks newer than the newest existing task
-      return apiClient.fetchTasks(undefined, undefined, 20, {
+      return apiClient.fetchTasks(20, {
         type: 'after',
         date: settings.newestTaskCreatedAt,
       });
@@ -73,7 +73,7 @@ export function useTaskSync({
         return { tasks: [], hasMore: false };
       }
 
-      return apiClient.fetchTasks(undefined, undefined, 20, {
+      return apiClient.fetchTasks(20, {
         type: 'before',
         date: settings.oldestTaskCreatedAt,
       });

@@ -21,8 +21,6 @@ export class GoogleTasksAPIClient implements APIClient {
   }
 
   fetchTasks(
-    _lastSyncAt?: Date,
-    _startCursor?: string,
     _pageSize = 50,
     _dateFilter?: DateFilter,
   ): Promise<FetchTasksResult> {
