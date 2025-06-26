@@ -77,7 +77,7 @@ export function PullToRefreshIndicator({
   return (
     <div
       className={cn(
-        'fixed top-0 right-0 left-0 z-40 flex items-center justify-center',
+        'fixed top-16 right-0 left-0 z-40 flex items-center justify-center',
         'border-b bg-background/90 backdrop-blur-sm transition-all duration-300',
         isVisible ? 'translate-y-0' : '-translate-y-full',
         isRefreshing &&

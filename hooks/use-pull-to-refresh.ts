@@ -16,7 +16,7 @@ export function usePullToRefresh(onRefresh: () => Promise<void>) {
 
   const handleTouchMove = useCallback(
     (e: TouchEvent) => {
-      if (window.scrollY > 0) {
+      if (window.scrollY > 0 || !startY) {
         return;
       }
 
