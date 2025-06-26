@@ -91,12 +91,6 @@ export default function Home() {
         message="タスクを同期しています..."
       />
 
-      <PullToRefreshIndicator
-        isVisible={isPulling}
-        isRefreshing={isRefreshing}
-        pullDistance={pullDistance}
-      />
-
       <Header
         onRefresh={() => sync()}
         onSearch={setSearchQuery}
@@ -106,6 +100,12 @@ export default function Home() {
         unreadCount={unreadCount}
         currentFilter={filter}
         onOpenSettings={() => setSettingsOpen(true)}
+      />
+
+      <PullToRefreshIndicator
+        isVisible={isPulling}
+        isRefreshing={isRefreshing}
+        pullDistance={pullDistance}
       />
 
       <main className="container px-4 py-6">

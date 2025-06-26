@@ -77,7 +77,7 @@ export function PullToRefreshIndicator({
   return (
     <div
       className={cn(
-        'fixed top-16 right-0 left-0 z-40 flex items-center justify-center',
+        'fixed right-0 left-0 z-30 flex items-center justify-center',
         'border-b bg-background/90 backdrop-blur-sm transition-all duration-300',
         isVisible ? 'translate-y-0' : '-translate-y-full',
         isRefreshing &&
@@ -86,6 +86,7 @@ export function PullToRefreshIndicator({
       style={{
         height: Math.min(pullDistance, 80),
         transform: `translateY(${isVisible ? 0 : -80}px)`,
+        top: 'calc(4rem + 3.75rem)',
       }}
     >
       {/* Animated background */}
