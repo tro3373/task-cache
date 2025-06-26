@@ -25,6 +25,7 @@ export function useTaskSync({
 }: UseTaskSyncOptions) {
   const [syncState, setSyncState] = useState<SyncState>('idle');
   const [hasMoreTasks, setHasMoreTasks] = useState(false);
+  const [hasInitialSynced, setHasInitialSynced] = useState(false);
 
   const getApiClient = useCallback(():
     | NotionAPIClient
@@ -290,6 +291,14 @@ export function useTaskSync({
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
+
+  // Initial sync on app load
+  useEffect(() => {
+    if (!hasInitialSynced && settings.backendType && syncState === 'idle') {
+      setHasInitialSynced(true);
+      sync();
+    }
+  }, [hasInitialSynced, settings.backendType, syncState, sync]);
 
   return {
     sync,
