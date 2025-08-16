@@ -87,7 +87,7 @@ export function TaskCard({
           disabled={!(task.url || task.notionPageUrl)}
         >
           <img
-            src={task.ogpImageUrl || task.imageUrl}
+            src={task.imageUrl || task.ogpImageUrl}
             alt={task.title}
             className="h-full w-full object-cover transition-transform duration-200 hover:scale-105"
             onError={() => setImageError(true)}
