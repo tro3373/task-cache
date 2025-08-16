@@ -258,6 +258,7 @@ export class NotionAPIClient implements APIClient {
     const notionDescription =
       page.properties.テキスト?.rich_text?.[0]?.text?.content || '';
     const taskUrl = page.properties.URL?.url || undefined;
+    const imageUrl = page.properties.画像URL?.url || undefined;
 
     // Fetch OGP data if URL exists
     let ogpData: { title?: string; description?: string; image?: string } = {};
@@ -281,6 +282,7 @@ export class NotionAPIClient implements APIClient {
         // biome-ignore lint/suspicious/noExplicitAny: Notion API structure
         page.properties.タグ?.multi_select?.map((tag: any) => tag.name) || [],
       url: taskUrl,
+      imageUrl: imageUrl,
       iconUrl: undefined, // Disabled icon functionality
       notionPageUrl: page.url,
       ogpImageUrl: ogpData.image,
