@@ -122,7 +122,7 @@ export class NotionAPIClient implements APIClient {
 
     // biome-ignore lint/suspicious/noExplicitAny: Notion API request body
     const requestBody: any = {
-      sorts: [{ property: '作成日時', direction: 'descending' }],
+      sorts: [{ property: 'ソート日付', direction: 'descending' }],
       // biome-ignore lint/style/useNamingConvention: Notion API field
       page_size: pageSize,
     };
