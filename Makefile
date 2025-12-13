@@ -22,7 +22,7 @@ npmi_if_needed:
 build: npmi_if_needed
 	@npm run build
 
-run: npmi_if_needed open_browser
+run: npmi_if_needed
 	@npm run dev
 
 dev: ## Start development server
